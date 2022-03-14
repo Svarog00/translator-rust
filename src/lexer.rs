@@ -17,14 +17,57 @@ impl<'a> Lexer<'a>{
         self.skip_whitespaces();
 
         match self.read_char() {
-            Some('=') => TokenType::Equal,
+            Some('=') => {
+                if self.peek_char_eq('=') {
+                    self.read_char(); 
+                    TokenType::Equal
+                }
+                else {
+                    TokenType::Assign
+                }
+            }
+            Some('!') => {
+                if self.peek_char_eq('=') {
+                    self.read_char();
+                    TokenType::NotEqual
+                }
+                else {
+                    TokenType::Illegal
+                }
+            }
+            Some('+') => TokenType::Plus,
+            Some('-') => TokenType::Minus,
+            Some(';') => TokenType::Semicolon,
+            Some('{') => TokenType::OpenningBrace,
+            Some('}') => TokenType::ClosingBrace,
+            Some('(') => TokenType::OpenningParenthesis,
+            Some(')') => TokenType::ClosingParenthesis,
+            Some('>') => {
+                if self.peek_char_eq('='){
+                    self.read_char();
+                    TokenType::GreaterOrEqual
+                }
+                else {
+                    TokenType::GreaterThan
+                }
+            }
+            Some('<') => {
+                if self.peek_char_eq('='){
+                    self.read_char();
+                    TokenType::LowerOrEqual
+                }
+                else {
+                    TokenType::LowerThan
+                }
+            }
             Some(ch) => {
                 if is_letter(ch) {
-                    let literal = self.read_identifier(ch);
-                    TokenType::check_ident(&literal)
+                    let literal = self.read_literal(ch);
+                    TokenType::check_identifier(&literal)
                 }
-                else if ch.is_numeric(){
-                    TokenType::Integer(self.read_number(ch))
+                else if ch.is_numeric() {
+                    let literal = self.read_literal(ch);
+                    TokenType::check_number(&literal)
                 }
                 else {
                     TokenType::Illegal
@@ -36,6 +79,13 @@ impl<'a> Lexer<'a>{
 
     fn peek_char(&mut self) -> Option<&char>{
         self.input.peek()
+    }
+
+    fn peek_char_eq(&mut self, ch : char) -> bool{
+        match self.peek_char(){
+            Some(&peeked_ch) => peeked_ch == ch,
+            None => false
+        }
     }
     
     fn skip_whitespaces(&mut self){
@@ -65,18 +115,18 @@ impl<'a> Lexer<'a>{
         number
     }
 
-    fn read_identifier(&mut self, first : char) -> String{
+    fn read_literal(&mut self, first : char) -> String{
         let mut ident = String::new();
         ident.push(first);
 
-        while self.peek_is_letter() {
+        while self.peek_is_legal() {
             ident.push(self.read_char().unwrap());
         }
         
         ident
     }
 
-    fn peek_is_letter(&mut self) -> bool{
+    fn peek_is_legal(&mut self) -> bool{
         match self.peek_char() {
             Some(&ch) => is_letter(ch) || ch.is_numeric(),
             None => false
