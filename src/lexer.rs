@@ -32,9 +32,19 @@ impl<'a> Lexer<'a>{
                     TokenType::NotEqual
                 }
                 else {
+                    TokenType::Not
+                }
+            }
+            Some('&') => {
+                if self.peek_char_eq('&') {
+                    self.read_char();
+                    TokenType::And
+                }
+                else {
                     TokenType::Illegal
                 }
             }
+            Some('.') => TokenType::Dot,
             Some('+') => TokenType::Plus,
             Some('-') => TokenType::Minus,
             Some(';') => TokenType::Semicolon,
@@ -42,6 +52,8 @@ impl<'a> Lexer<'a>{
             Some('}') => TokenType::ClosingBrace,
             Some('(') => TokenType::OpenningParenthesis,
             Some(')') => TokenType::ClosingParenthesis,
+            Some('[') => TokenType::OpenningArray,
+            Some(']') => TokenType::ClosingArray,
             Some('>') => {
                 if self.peek_char_eq('='){
                     self.read_char();
@@ -106,10 +118,12 @@ impl<'a> Lexer<'a>{
         number.push(first);
 
         while let Some(&ch) = self.peek_char(){
-            if !ch.is_numeric(){
+            if ch.is_digit(10) || ch == '.'{
+                number.push(self.read_char().unwrap());
+            }
+            else {
                 break;  
             }
-            number.push(self.read_char().unwrap());
         }
 
         number
