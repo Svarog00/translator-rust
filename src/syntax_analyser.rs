@@ -2,6 +2,8 @@ use crate::token::*;
 use crate::lexer::*;
 use std::vec::*;
 
+//Таблица вызова функций, таблица переменных и, видимо, таблица для if
+
 pub struct Analyser<'a>{
     lexer : Lexer<'a>,
     current_token : TokenType,
@@ -84,7 +86,39 @@ impl<'a> Analyser<'a> {
     }
 
     fn check_semicolon(&mut self) {
+        self.next_token();
+        match self.current_token {
+            TokenType::Identifier(_) => self.check_identifier(),
+            TokenType::Type(_) => self.check_type(),
+            TokenType::If => self.check_if(),
+            TokenType::While => self.check_while(),
+            TokenType::For => self.check_for(),
+            TokenType::ClosingBrace => self.check_closing_brace(),
+            _ => self.panic_syntax_error("After semicolon cannot go that token"),
+        }
         //Identifier, type, if, while, for
+    }
+    
+    fn check_closing_brace(&mut self) {
+        //type, identifier
+    }
+
+    fn check_if(&mut self) {
+        self.next_token();
+        match self.current_token {
+            TokenType::OpenningParenthesis => self.check_open_parent(),
+            _ => self.panic_syntax_error("need condition!"),
+        }
+        //open parent
+    }
+
+    fn check_while(&mut self) {
+        //open parent
+        
+    }
+
+    fn check_for(&mut self) {
+        //Open parent
     }
 
     fn check_open_array(&mut self) {
