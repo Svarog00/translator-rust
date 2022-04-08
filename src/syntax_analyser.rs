@@ -37,13 +37,22 @@ impl<'a> Analyser<'a> {
         }
     }
 
-    pub fn start_analysis(&mut self) {
+    pub fn start_analysis(&mut self) -> bool {
         self.next_token();
-        match self.current_token {
-            TokenType::Type(_) => self.check_declare(),
-            TokenType::Eof => self.eof_token(),
-            _ => self.panic_syntax_error("Wrong start token"),
+        while self.current_token != TokenType::Eof {
+            match self.current_token {
+                TokenType::Type(_) => {
+                    self.check_declare();
+                },
+                TokenType::Eof => return true,
+                _ => {
+                    self.panic_syntax_error("Wrong start token");
+                    return false;
+                },
+            }
+            self.next_token();
         }
+        true
     }
 
     fn panic_syntax_error(&self, message : &str) {
