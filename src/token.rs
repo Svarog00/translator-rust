@@ -39,6 +39,7 @@ pub enum TokenType{
     LowerOrEqual,
 
     Dot,
+    Comma,
 
     //Literals
     Identifier(String),

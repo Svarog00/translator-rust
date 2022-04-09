@@ -45,6 +45,7 @@ impl<'a> Lexer<'a>{
                 }
             }
             Some('.') => TokenType::Dot,
+            Some(',') => TokenType::Comma,            
             Some('+') => TokenType::Plus,
             Some('-') => TokenType::Minus,
             Some(';') => TokenType::Semicolon,
