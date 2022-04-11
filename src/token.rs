@@ -15,6 +15,8 @@ pub enum TokenType{
 
     Plus,
     Minus,
+    Multi,
+    Divide,
     Equal,
     NotEqual,
     And,

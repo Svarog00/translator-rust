@@ -48,6 +48,8 @@ impl<'a> Lexer<'a>{
             Some(',') => TokenType::Comma,            
             Some('+') => TokenType::Plus,
             Some('-') => TokenType::Minus,
+            Some('*') => TokenType::Multi,
+            Some('/') => TokenType::Divide,
             Some(';') => TokenType::Semicolon,
             Some('{') => TokenType::OpenningBrace,
             Some('}') => TokenType::ClosingBrace,
