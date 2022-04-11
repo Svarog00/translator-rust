@@ -3,11 +3,13 @@ use std::io::{self, BufRead, Write};
 pub mod token;
 pub mod lexer;
 pub mod syntax_analyser;
+pub mod tree;
 
 mod prelude {
     pub use crate::token::*;
     pub use crate::lexer::*;
     pub use crate::syntax_analyser::*;
+    pub use crate::tree::*;
 }
 
 use prelude::*;

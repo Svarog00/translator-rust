@@ -1,5 +1,6 @@
 use crate::token::*;
 use crate::lexer::*;
+use crate::tree::*;
 use std::vec::*;
 
 //statement - внутри {}
@@ -26,7 +27,7 @@ use std::vec::*;
 pub struct Analyser<'a>{
     lexer : Lexer<'a>,
     current_token : TokenType,
-    //logic_tree : Tree,
+    logic_tree : Tree,
 }
 
 impl<'a> Analyser<'a> {
@@ -34,6 +35,7 @@ impl<'a> Analyser<'a> {
         Analyser {
             lexer,
             current_token : TokenType::default(),
+            
         }
     }
 
