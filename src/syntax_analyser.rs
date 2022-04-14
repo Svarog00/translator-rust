@@ -1,6 +1,4 @@
-use crate::token::*;
-use crate::lexer::*;
-use crate::tree::*;
+use crate::prelude::*;
 use std::vec::*;
 
 //statement - внутри {}
@@ -26,6 +24,7 @@ use std::vec::*;
 
 pub struct Analyser<'a>{
     lexer : Lexer<'a>,
+    previous_token : TokenType,
     current_token : TokenType,
     logic_tree : Tree,
 }
@@ -35,6 +34,7 @@ impl<'a> Analyser<'a> {
         Analyser {
             lexer,
             current_token : TokenType::default(),
+            previous_token : TokenType::default(),
             logic_tree : Tree::new(),
         }
     }
@@ -68,6 +68,7 @@ impl<'a> Analyser<'a> {
     }
 
     fn next_token(&mut self) {
+        self.previous_token = self.current_token;
         self.current_token = self.lexer.next_token();
         println!("Parser got {:?} token", self.current_token);
     }
@@ -229,6 +230,7 @@ impl<'a> Analyser<'a> {
                 }
             },
             TokenType::Identifier(_) => {
+                //add this token to expression node
                 self.next_token();
                 match self.current_token {
                     TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
@@ -254,6 +256,15 @@ impl<'a> Analyser<'a> {
                 }
             },
             _ => self.panic_syntax_error("In expression wrong token")
+        }
+        self.next_token(); 
+        match self.current_token {
+            TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                //Add expression node
+                self.check_expression();
+            },
+            TokenType::Semicolon => return,
+            _ => self.panic_syntax_error("Wrong token in expression check"),
         }
     }
 
@@ -282,16 +293,70 @@ impl<'a> Analyser<'a> {
     }
 
     fn check_condition(&mut self) {
-        loop {
-            self.next_token();
-            match self.current_token {
-                
-
-                TokenType::ClosingParenthesis => {
-                    break;
-                },
-                _ => self.panic_syntax_error("Wrong token in condition"),
+        self.next_token();
+        match self.current_token {
+            TokenType::OpenningParenthesis => {
+                //add condition node
+                loop {
+                    self.next_token();
+                    match self.current_token {
+                        TokenType::Identifier(_) | TokenType::Number(_) => {
+                            self.next_token();
+                            match self.current_token {
+                                TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                                    //add bin operation node
+                                    self.check_expression();
+                                    self.next_token(); 
+                                    match self.current_token {
+                                        TokenType::Equal | TokenType::LowerOrEqual | TokenType::GreaterOrEqual |
+                                        TokenType::GreaterThan | TokenType::LowerThan => {
+                                            self.check_equation();
+                                        },
+                                        _ => self.panic_syntax_error("In condition after expression got wrong token"),
+                                    }
+                                },
+                                TokenType::And | TokenType::Or => {
+                                    //add prev token in condition's vector as var node
+                                    continue;
+                                },
+                                TokenType::ClosingParenthesis => break,
+                                _ => self.panic_syntax_error("Wrong delimiter between vars in condition"),
+                            }
+                        },
+                        TokenType::Bool(_) => {
+                            //add var node
+                            self.next_token();
+                            match self.current_token {
+                                TokenType::And | TokenType::Or => {
+                                    continue;
+                                },
+                                TokenType::ClosingParenthesis => break,
+                                _ => self.panic_syntax_error("Wrong delimiter between vars in condition"),
+                            }
+                        },
+                        _ => self.panic_syntax_error("Wrong token in condition body"),
+                    }   
+                }
             }
+            _ => self.panic_syntax_error("Wrong token after if/while"),
+        }
+    }
+
+    fn check_equation(&mut self) {
+        //add new equation node
+        self.next_token();
+        match self.current_token {
+            TokenType::Identifier(_) | TokenType::Number(_) => {
+                self.next_token();
+                match self.current_token {
+                    TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                        //add bin operation node
+                        self.check_expression();
+                    },
+                    _ => return,
+                }
+            },
+            _ => self.panic_syntax_error("Wrong token in equation"),
         }
     }
 
