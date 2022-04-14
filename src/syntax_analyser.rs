@@ -35,7 +35,7 @@ impl<'a> Analyser<'a> {
         Analyser {
             lexer,
             current_token : TokenType::default(),
-            
+            logic_tree : Tree::new(),
         }
     }
 
@@ -45,6 +45,9 @@ impl<'a> Analyser<'a> {
             match self.current_token {
                 TokenType::Type(_) => {
                     self.check_declare();
+                },
+                TokenType::Struct => {
+                    self.check_struct_declare();
                 },
                 _ => {
                     self.panic_syntax_error("Wrong start token");
@@ -71,38 +74,42 @@ impl<'a> Analyser<'a> {
 
     fn check_declare(&mut self) {
         self.next_token();
-        match self.current_token {
-            TokenType::Identifier(_) => {
-                self.next_token();
-                match self.current_token {
-                    TokenType::OpenningParenthesis => {
-                        //Add func node to AST
-                        self.check_func_params();
-                        self.next_token();
-                        match self.current_token {
-                            TokenType::OpenningBrace => {
-                                self.check_statement();
-                            },
-                            TokenType::Semicolon => {
-                                return
+        loop {
+            match self.current_token {
+                TokenType::Identifier(_) => {
+                    self.next_token();
+                    match self.current_token {
+                        TokenType::OpenningParenthesis => {
+                            //Add func node to AST
+                            self.check_func_params();
+                            self.next_token();
+                            match self.current_token {
+                                TokenType::OpenningBrace => {
+                                    self.check_statement();
+                                },
+                                TokenType::Semicolon => {
+                                    return
+                                },
+                                _ => self.panic_syntax_error("After func declaration must go block or semicolon"),
                             }
-                            _ => self.panic_syntax_error("After func declaration must go block or semicolon"),
-                        }
+                        },
+                        TokenType::Semicolon => {
+                            //Add var node to AST
+                            break;
+                        },
+                        TokenType::OpenningArray => {
+                            //add array decl node
+                            self.check_array_declare();
+                        },
+                        TokenType::Assign => {
+                            //add assign node
+                            self.check_assign();
+                        },
+                        _ => self.panic_syntax_error("After id in declaration should go assign, array assign, semicolon or func params"),
                     }
-                    TokenType::Semicolon => {
-                        //Add var node to AST
-                        
-                    }
-                    TokenType::OpenningArray => {
-                        self.check_array_declare();
-                    }
-                    TokenType::Assign => {
-                        self.check_assign();
-                    }
-                    _ => self.panic_syntax_error("After id in declaration should go assign, array assign, semicolon or func params"),
-                }
-            },
-            _ => self.panic_syntax_error("After type declaration should go identifier"),
+                },
+                _ => self.panic_syntax_error("After type declaration should go identifier"),
+            }
         }
     }
     
@@ -124,17 +131,12 @@ impl<'a> Analyser<'a> {
     }
 
     fn check_var(&mut self) {
+        self.next_token();
         match self.current_token {
-            TokenType::Type(_) => {
-                self.next_token();
-                match self.current_token {
-                    TokenType::Identifier(_) => {
-                        //Add var node in AST
-                    }
-                    _ => self.panic_syntax_error("After type declaration must go identifier"),
-                }
-            }
-            _ => self.panic_syntax_error("In variable declaration must go first type"),
+            TokenType::Identifier(_) => {
+                //Add var node in AST
+            },
+            _ => self.panic_syntax_error("After type declaration must go identifier"),
         }
     }
 
@@ -150,7 +152,7 @@ impl<'a> Analyser<'a> {
             TokenType::Identifier(_) =>{
                 //Add array node with identifier in count
             }
-            _ => self.panic_syntax_error("In array declaration expected number, identifier or none"),
+            _ => self.panic_syntax_error("In array declaration expected number, identifier or nothing"),
         }
     }
 
@@ -162,44 +164,50 @@ impl<'a> Analyser<'a> {
                 TokenType::Identifier(_) => {
                     self.check_primary();
                 },
-                TokenType::If | TokenType::While | TokenType::For => {
+                TokenType::If | TokenType::While => {
                     self.check_condition();
-                    self.check_statement();
+                    self.next_token();
+                    match self.current_token {
+                        TokenType::OpenningBrace => self.check_statement(),
+                        _ => self.panic_syntax_error("After if/while expected body"),
+                    }
                 },
                 TokenType::Type(_) => {
                     self.check_declare();
                 },
                 _ => self.panic_syntax_error("Unexpected token in statement body"),
             }
-
-            if self.current_token == TokenType::Semicolon {
-                continue;
-            }
-            else {
-                self.panic_syntax_error("Lost semicolon in a statement");
-            }
         }
     }
 
     fn check_primary(&mut self) {
         self.next_token();
-        match self.current_token {
-            TokenType::Assign => {
-                //Add assign node
-                self.check_assign();
-            },
-            TokenType::OpenningArray => {
-                //Add array access token
-                self.check_array_access_element();
-            }, 
-            TokenType::OpenningParenthesis => {
-                //Add func call node (id, node args (id, num list))
-                self.check_func_args();
-            },
-            TokenType::Dot => {
-                self.check_struct_access();
-            },
-            _ => self.panic_syntax_error("Wrong token after identifier in statement"),
+        loop {
+            match self.current_token {
+                TokenType::Assign => {
+                    //Add assign node
+                    self.check_assign();
+                },
+                TokenType::OpenningArray => {
+                    //Add array access node
+                    self.check_array_access_element();
+                }, 
+                TokenType::OpenningParenthesis => {
+                    //Add func call node (id, node args (id, num list))
+                    self.check_func_args();
+                },
+                TokenType::Dot => {
+                    //add struct access node
+                    self.check_struct_access();
+                },
+                _ => self.panic_syntax_error("Wrong token after identifier in statement"),
+            }
+
+            self.next_token();
+            match self.current_token {
+                TokenType::Semicolon => break,
+                _ => self.panic_syntax_error("Wrong token after identifier in statement"),
+            }
         }
     }
 
@@ -277,6 +285,8 @@ impl<'a> Analyser<'a> {
         loop {
             self.next_token();
             match self.current_token {
+                
+
                 TokenType::ClosingParenthesis => {
                     break;
                 },
@@ -287,23 +297,21 @@ impl<'a> Analyser<'a> {
 
     fn check_array_access_element(&mut self) {
         self.next_token();
-        loop {
-            match self.current_token {
-                //Add array access
-                TokenType::Identifier(_) | TokenType:: Number(_) => {
-                    self.next_token();
-                    match self.current_token {
-                        TokenType::ClosingArray => {
-                            return;
-                        },
-                        TokenType::Multi | TokenType::Plus | TokenType::Multi | TokenType::Divide => {
-                            self.check_expression();
-                        },
-                        _ => self.panic_syntax_error("Expected expression or closing array bracket"),
-                    }
-                },
-                _ => self.panic_syntax_error("In array access expected number, id or expression"),
-            }
+        match self.current_token {
+            //Add array access
+            TokenType::Identifier(_) | TokenType:: Number(_) => {
+                self.next_token();
+                match self.current_token {
+                    TokenType::ClosingArray => {
+                        return;
+                    },
+                    TokenType::Multi | TokenType::Plus | TokenType::Minus | TokenType::Divide => {
+                        self.check_expression();
+                    },
+                    _ => self.panic_syntax_error("Expected expression or closing array bracket"),
+                }
+            },
+            _ => self.panic_syntax_error("In array access expected number, id or expression"),
         }
     }
 
@@ -315,6 +323,9 @@ impl<'a> Analyser<'a> {
                     //Add id or number in node
                     self.next_token();
                     match self.current_token {
+                        TokenType::Multi | TokenType::Plus | TokenType::Minus | TokenType::Divide => {
+                            self.check_expression();
+                        },
                         TokenType::Comma => continue,
                         _ => self.panic_syntax_error("No comma after arg"),
                     }
@@ -327,13 +338,47 @@ impl<'a> Analyser<'a> {
         }
     }
 
-    fn check_struct_access(&mut self) {
+    fn check_struct_declare(&mut self) {
         self.next_token();
         match self.current_token {
             TokenType::Identifier(_) => {
-                return;
+                self.next_token();
+                match self.current_token {
+                    TokenType::OpenningBrace => {
+                        loop {
+                            self.next_token();
+                            match self.current_token {
+                                TokenType::Type(_) => {
+                                    self.check_var();
+                                    self.next_token();
+                                    match self.current_token {
+                                        TokenType::Semicolon => continue,
+                                        _ => self.panic_syntax_error("Wrong token on struct declaration"),
+                                    }
+                                },
+                                TokenType::ClosingBrace => break,
+                                _ => self.panic_syntax_error("Wrong token on struct declaration"),
+                            }
+                        }
+                    },
+                    _ => self.panic_syntax_error("After struct name expected '{'"),
+                }
             },
-            _ => self.panic_syntax_error("Wrong struct element access"),
+            _ => self.panic_syntax_error("After struct word should go id"),
+        }
+    }
+
+    fn check_struct_access(&mut self) {
+        //add struct field access
+        self.next_token();
+        match self.current_token {
+            TokenType::Identifier(_) => {
+                self.next_token();
+                if self.current_token == TokenType::Dot {
+                    self.check_struct_access();
+                }
+            },
+            _ => return,
         }
     }
     //Function for every poopoo
