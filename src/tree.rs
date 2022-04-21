@@ -26,6 +26,7 @@ pub enum ExpressionNode {
     },
     VarNode {
         identifier : TokenType, //id
+        var_type : TokenType,
     },
     StatementNode {
         nodes : Vec<Box<ExpressionNode>>,
@@ -59,7 +60,7 @@ pub enum ExpressionNode {
     },
     ArrayDeclareNode {
         identifier : TokenType,
-        elements_number : TokenType, //id or number
+        elements_number : Box<ExpressionNode>, //id or number or expression
     },
     ArrayAccessNode {
         identifier : TokenType,

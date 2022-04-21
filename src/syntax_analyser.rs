@@ -68,50 +68,51 @@ impl<'a> Analyser<'a> {
     }
 
     fn next_token(&mut self) {
-        self.previous_token = self.current_token;
+        self.previous_token = self.current_token.clone();
         self.current_token = self.lexer.next_token();
         println!("Parser got {:?} token", self.current_token);
     }
 
     fn check_declare(&mut self) {
         self.next_token();
-        loop {
-            match self.current_token {
-                TokenType::Identifier(_) => {
-                    self.next_token();
-                    match self.current_token {
-                        TokenType::OpenningParenthesis => {
-                            //Add func node to AST
-                            self.check_func_params();
-                            self.next_token();
-                            match self.current_token {
-                                TokenType::OpenningBrace => {
-                                    self.check_statement();
-                                },
-                                TokenType::Semicolon => {
-                                    return
-                                },
-                                _ => self.panic_syntax_error("After func declaration must go block or semicolon"),
-                            }
-                        },
-                        TokenType::Semicolon => {
-                            //Add var node to AST
-                            break;
-                        },
-                        TokenType::OpenningArray => {
-                            //add array decl node
-                            self.check_array_declare();
-                        },
-                        TokenType::Assign => {
-                            //add assign node
-                            self.check_assign();
-                        },
-                        _ => self.panic_syntax_error("After id in declaration should go assign, array assign, semicolon or func params"),
-                    }
-                },
-                _ => self.panic_syntax_error("After type declaration should go identifier"),
-            }
+        match self.current_token {
+            TokenType::Identifier(_) => {
+                self.next_token();
+                match self.current_token {
+                    TokenType::OpenningParenthesis => {
+                        //Add func node to AST
+                        self.check_func_params();
+                        self.next_token();
+                        match self.current_token {
+                            TokenType::OpenningBrace => {
+                                self.check_statement();
+                            },
+                            TokenType::Semicolon => {
+                                return
+                            },
+                            _ => self.panic_syntax_error("After func declaration must go block or semicolon"),
+                        }
+                    },
+                    TokenType::Semicolon => {
+                        //Add var node to AST
+                        return;
+                    },
+                    TokenType::OpenningArray => {
+                        //add array decl node
+                        self.check_array_declare();
+                    },
+                    TokenType::Assign => {
+                        //add assign node
+                        self.check_assign();
+                    },
+                    _ => self.panic_syntax_error("After id in declaration should go assign, array assign, semicolon or func params"),
+                }
+            },
+            _ => self.panic_syntax_error("After type declaration should go identifier"),
         }
+        //loop {
+            
+        //}
     }
     
     fn check_func_params(&mut self) {
@@ -121,8 +122,10 @@ impl<'a> Analyser<'a> {
                 TokenType::Type(_) => {
                     self.check_var();
                     self.next_token();
-                    if self.current_token == TokenType::Comma {
-                        continue;
+                    match self.current_token {
+                        TokenType::Comma => continue,
+                        TokenType::ClosingParenthesis => break,
+                        _ => self.panic_syntax_error("Wrong token after one of func params"),
                     }
                 },
                 TokenType::ClosingParenthesis => break,
@@ -146,14 +149,41 @@ impl<'a> Analyser<'a> {
         match self.current_token {
             TokenType::Number(_) => {
                 //Add array node with number in count
+                self.next_token();
+                match self.current_token {
+                    TokenType::Plus | TokenType::Multi | TokenType::Minus | TokenType::Divide => {
+                        self.check_expression();
+                    }
+                    TokenType::ClosingArray => {
+                        return;
+                    }
+                    _ => self.panic_syntax_error("Wrong token in array declaration"),
+                }
             }
             TokenType::ClosingArray => {
                 //Add array node with 0 in count
+                return;
             }
             TokenType::Identifier(_) =>{
                 //Add array node with identifier in count
+                self.next_token();
+                match self.current_token {
+                    TokenType::Plus | TokenType::Multi | TokenType::Minus | TokenType::Divide => {
+                        self.check_expression();
+                    }
+                    TokenType::ClosingArray => {
+                        return;
+                    }
+                    _ => self.panic_syntax_error("Wrong token in array declaration"),
+                }
             }
             _ => self.panic_syntax_error("In array declaration expected number, identifier or nothing"),
+        }
+        if self.current_token == TokenType::ClosingArray {
+            return;
+        }
+        else {
+            self.panic_syntax_error("Expected closing array");
         }
     }
 
@@ -165,7 +195,13 @@ impl<'a> Analyser<'a> {
                 TokenType::Identifier(_) => {
                     self.check_primary();
                 },
-                TokenType::If | TokenType::While => {
+                TokenType::If => {
+                    self.check_if_state();
+                    if self.current_token == TokenType::ClosingBrace {
+                        return;
+                    }
+                },
+                TokenType::While => {
                     self.check_condition();
                     self.next_token();
                     match self.current_token {
@@ -177,6 +213,28 @@ impl<'a> Analyser<'a> {
                     self.check_declare();
                 },
                 _ => self.panic_syntax_error("Unexpected token in statement body"),
+            }
+        }
+    }
+
+    fn check_if_state(&mut self) {
+        self.check_condition();
+        self.next_token();
+        match self.current_token {
+            TokenType::OpenningBrace => self.check_statement(),
+            _ => self.panic_syntax_error("After if/while expected body"),
+        }
+        self.next_token();
+        if self.current_token == TokenType::Else {
+            self.next_token();
+            match self.current_token {
+                TokenType::OpenningBrace => {
+                    self.check_statement();
+                },
+                TokenType::If => {
+                    self.check_if_state();
+                }
+                _ => self.panic_syntax_error("After else expected body or if"),
             }
         }
     }
@@ -221,12 +279,10 @@ impl<'a> Analyser<'a> {
                 match self.current_token {
                     TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
                         //Add expression node
+                        
                         self.check_expression();
                     },
-                    TokenType::Semicolon => {
-                        return;
-                    }
-                    _ => self.panic_syntax_error("In expression after number ocurred problem"),
+                    _ => return,
                 }
             },
             TokenType::Identifier(_) => {
@@ -249,10 +305,7 @@ impl<'a> Analyser<'a> {
                         //Add fuction call node
                         self.check_func_args();
                     },
-                    TokenType::Semicolon => {
-                        return;
-                    },
-                    _ => self.panic_syntax_error("In expression after identifier occurred problem"),
+                    _ => return,
                 }
             },
             _ => self.panic_syntax_error("In expression wrong token")
@@ -263,8 +316,7 @@ impl<'a> Analyser<'a> {
                 //Add expression node
                 self.check_expression();
             },
-            TokenType::Semicolon => return,
-            _ => self.panic_syntax_error("Wrong token in expression check"),
+            _ => return,
         }
     }
 
@@ -300,46 +352,48 @@ impl<'a> Analyser<'a> {
                 loop {
                     self.next_token();
                     match self.current_token {
-                        TokenType::Identifier(_) | TokenType::Number(_) => {
+                        TokenType::Identifier(_) | TokenType::Number(_) | TokenType::Bool(_) => {
                             self.next_token();
                             match self.current_token {
                                 TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
-                                    //add bin operation node
                                     self.check_expression();
-                                    self.next_token(); 
                                     match self.current_token {
-                                        TokenType::Equal | TokenType::LowerOrEqual | TokenType::GreaterOrEqual |
-                                        TokenType::GreaterThan | TokenType::LowerThan => {
-                                            self.check_equation();
-                                        },
-                                        _ => self.panic_syntax_error("In condition after expression got wrong token"),
+                                        TokenType::ClosingParenthesis => break,
+                                        TokenType::And | TokenType::Or => {
+                                            self.check_logic_operation();
+                                            self.next_token();
+                                            match self.current_token {
+                                                TokenType::ClosingParenthesis => break,
+                                                _ => continue,
+                                            }
+                                        }
+                                        _ => continue,
                                     }
-                                },
+                                }
                                 TokenType::And | TokenType::Or => {
-                                    //add prev token in condition's vector as var node
-                                    continue;
-                                },
+                                    self.check_logic_operation();
+                                    match self.current_token {
+                                        TokenType::ClosingParenthesis => break,
+                                        _ => continue,
+                                    }
+                                }
                                 TokenType::ClosingParenthesis => break,
-                                _ => self.panic_syntax_error("Wrong delimiter between vars in condition"),
+                                _ => self.panic_syntax_error("Expected something another"),
                             }
                         },
-                        TokenType::Bool(_) => {
-                            //add var node
-                            self.next_token();
-                            match self.current_token {
-                                TokenType::And | TokenType::Or => {
-                                    continue;
-                                },
-                                TokenType::ClosingParenthesis => break,
-                                _ => self.panic_syntax_error("Wrong delimiter between vars in condition"),
-                            }
+                        TokenType::ClosingParenthesis => {
+                            break;
                         },
                         _ => self.panic_syntax_error("Wrong token in condition body"),
-                    }   
+                    }
                 }
             }
             _ => self.panic_syntax_error("Wrong token after if/while"),
         }
+    }
+
+    fn check_logic_operation(&mut self) {
+        
     }
 
     fn check_equation(&mut self) {
@@ -391,7 +445,10 @@ impl<'a> Analyser<'a> {
                         TokenType::Multi | TokenType::Plus | TokenType::Minus | TokenType::Divide => {
                             self.check_expression();
                         },
-                        TokenType::Comma => continue,
+                        TokenType::Comma => {
+                            self.next_token();
+                            continue;
+                        }
                         _ => self.panic_syntax_error("No comma after arg"),
                     }
                 },

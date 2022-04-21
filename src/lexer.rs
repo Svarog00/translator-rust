@@ -44,6 +44,15 @@ impl<'a> Lexer<'a>{
                     TokenType::Illegal
                 }
             }
+            Some('|') => {
+                if self.peek_char_eq('|') {
+                    self.read_char();
+                    TokenType::Or
+                }
+                else {
+                    TokenType::Illegal
+                }
+            }
             Some('.') => TokenType::Dot,
             Some(',') => TokenType::Comma,            
             Some('+') => TokenType::Plus,
@@ -81,8 +90,8 @@ impl<'a> Lexer<'a>{
                     TokenType::check_identifier(&literal)
                 }
                 else if ch.is_numeric() {
-                    let literal = self.read_literal(ch);
-                    TokenType::check_number(&literal)
+                    let literal = self.read_number(ch);
+                    TokenType::Number(literal)
                 }
                 else {
                     TokenType::Illegal
