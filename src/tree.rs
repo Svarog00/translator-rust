@@ -3,6 +3,7 @@ use crate::token::*;
 #[derive(Debug, Clone)]
 pub struct Tree {
     root : ExpressionNode,
+    previous_nodes : Vec<ExpressionNode>,
     current_node : Box<ExpressionNode>,
 }
 
@@ -11,6 +12,7 @@ impl Tree {
         Tree {
             root: ExpressionNode::ProgramNode { expressions: Vec::new() },
             current_node: Box::new(ExpressionNode::new()),
+            previous_nodes : Vec::new(),
         }
     }
 }
@@ -22,7 +24,7 @@ pub enum ExpressionNode {
         expressions : Vec<Box<ExpressionNode>>,
     },
     ConstNode {
-        identifier : TokenType, //number
+        number : TokenType, //number
     },
     VarNode {
         identifier : TokenType, //id
@@ -42,7 +44,7 @@ pub enum ExpressionNode {
         right_operand : Box<ExpressionNode>,//var or function call or bin operation or array access or struct access
     },
     ConditionNode {
-        nodes : Vec<Box<ExpressionNode>>, //var nodes or bin operation
+        nodes : Box<ExpressionNode>, //var nodes or bin operation
     },
     CallFunctionNode {
         identifier : TokenType,

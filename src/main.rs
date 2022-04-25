@@ -30,18 +30,9 @@ fn main() {
         .read_line(&mut line)
         .expect("Something wnt wrong reading line");
 
-        let mut lexer = Lexer::new(&line);
+        let lexer = Lexer::new(&line);
         let mut analyser = Analyser::new(lexer);
         analyser.start_analysis();
-        /*
-        loop {
-            let token = lexer.next_token();
-            println!("{:?}", token);
-            if token == TokenType::Eof {
-                break;
-            }
-        }
-        */
     }
     
 }

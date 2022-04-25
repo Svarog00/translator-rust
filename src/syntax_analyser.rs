@@ -110,9 +110,6 @@ impl<'a> Analyser<'a> {
             },
             _ => self.panic_syntax_error("After type declaration should go identifier"),
         }
-        //loop {
-            
-        //}
     }
     
     fn check_func_params(&mut self) {
@@ -212,8 +209,37 @@ impl<'a> Analyser<'a> {
                 TokenType::Type(_) => {
                     self.check_declare();
                 },
+                TokenType::Return => {
+                    self.check_return();
+                },
                 _ => self.panic_syntax_error("Unexpected token in statement body"),
             }
+        }
+    }
+
+    fn check_return(&mut self){
+        self.next_token();
+        match self.current_token {
+            TokenType::Number(_) | TokenType::Identifier(_) | TokenType::Bool(_) => {
+                self.next_token();
+                match self.current_token {
+                    TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                        //Add expression node
+                        self.check_expression();
+                    },
+                    TokenType::Equal => {
+                        self.check_equation();
+                    }
+                    TokenType::Semicolon => return,
+                    _ => self.panic_syntax_error("Wrong token after return expression"),
+                }
+            }
+            _ => self.panic_syntax_error("Wrong token after return word"),
+        }
+
+        match self.current_token {
+            TokenType::Semicolon => return,
+            _ => self.panic_syntax_error("Expected semicolon after return expression")
         }
     }
 
@@ -355,45 +381,48 @@ impl<'a> Analyser<'a> {
                         TokenType::Identifier(_) | TokenType::Number(_) | TokenType::Bool(_) => {
                             self.next_token();
                             match self.current_token {
+                                TokenType::Equal => {
+                                    self.check_equation();
+                                }
                                 TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
                                     self.check_expression();
-                                    match self.current_token {
-                                        TokenType::ClosingParenthesis => break,
-                                        TokenType::And | TokenType::Or => {
-                                            self.check_logic_operation();
-                                            self.next_token();
-                                            match self.current_token {
-                                                TokenType::ClosingParenthesis => break,
-                                                _ => continue,
-                                            }
-                                        }
-                                        _ => continue,
-                                    }
                                 }
                                 TokenType::And | TokenType::Or => {
-                                    self.check_logic_operation();
+                                    //add bin operator in tree
+                                    continue;
+                                    /*match self.current_token {
+                                        TokenType::ClosingParenthesis => break,
+                                        _ => continue,
+                                    }*/
+                                }
+                                TokenType::ClosingParenthesis => break,
+                                _ => self.panic_syntax_error("After id expected cl. parenthesis, logic op or math. sign"),
+                            }
+
+                            match self.current_token {
+                                TokenType::ClosingParenthesis => break,
+                                TokenType::And | TokenType::Or => {
+                                    //add bin operator in tree
+                                    continue;
+                                    /*self.next_token();
                                     match self.current_token {
                                         TokenType::ClosingParenthesis => break,
                                         _ => continue,
-                                    }
+                                    }*/
+
                                 }
-                                TokenType::ClosingParenthesis => break,
-                                _ => self.panic_syntax_error("Expected something another"),
+                                _ => self.panic_syntax_error("Expected logic op or closing parenth"),
                             }
                         },
                         TokenType::ClosingParenthesis => {
                             break;
                         },
-                        _ => self.panic_syntax_error("Wrong token in condition body"),
+                        _ => self.panic_syntax_error("Expected closing parenth, number, bool or id"),
                     }
                 }
             }
-            _ => self.panic_syntax_error("Wrong token after if/while"),
+            _ => self.panic_syntax_error("Expected openning parenthesis after if/while"),
         }
-    }
-
-    fn check_logic_operation(&mut self) {
-        
     }
 
     fn check_equation(&mut self) {

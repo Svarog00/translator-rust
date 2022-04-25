@@ -62,6 +62,7 @@ impl Default for TokenType{
 impl TokenType {
     pub fn check_identifier(ident : &str) -> TokenType {
         match ident {
+            "void" => TokenType::Type(ident.to_string()),
             "int" => TokenType::Type(ident.to_string()),
             "double" => TokenType::Type(ident.to_string()),
             "bool" => TokenType::Type(ident.to_string()),
