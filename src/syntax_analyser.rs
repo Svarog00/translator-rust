@@ -305,7 +305,6 @@ impl<'a> Analyser<'a> {
                 match self.current_token {
                     TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
                         //Add expression node
-                        
                         self.check_expression();
                     },
                     _ => return,
@@ -363,10 +362,22 @@ impl<'a> Analyser<'a> {
                         //add func call node
                         self.check_func_args();
                     },
+                    TokenType::Dot => {
+                        self.check_struct_access();
+                    }
                     _ => self.panic_syntax_error("In assign occurred error"),
                 }
             },
             _ => self.panic_syntax_error("After assign occurred problem")
+        }
+
+        self.next_token();
+        match self.current_token {
+            TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                //Add expression node
+                self.check_expression();
+            },
+            _ => return,
         }
     }
 
@@ -516,6 +527,24 @@ impl<'a> Analyser<'a> {
                 }
             },
             _ => self.panic_syntax_error("After struct word should go id"),
+        }
+    }
+
+    fn check_struct_body(&mut self) {
+        loop {
+            self.next_token();
+            match self.current_token {
+                TokenType::Type(_) => {
+                    self.check_var();
+                    self.next_token();
+                    match self.current_token {
+                        TokenType::Semicolon => continue,
+                        _ => self.panic_syntax_error("Wrong token on struct declaration"),
+                    }
+                },
+                TokenType::ClosingBrace => break,
+                _ => self.panic_syntax_error("Wrong token on struct declaration"),
+            }
         }
     }
 
