@@ -190,6 +190,42 @@ impl<'a> Analyser<'a> {
         loop {
             self.next_token();
             match self.current_token {
+                TokenType::Semicolon => continue,
+                TokenType::ClosingBrace => break,
+                TokenType::Identifier(_) => {
+                    self.check_primary();
+                },
+                TokenType::If => {
+                    self.check_if_state();
+                    if self.current_token == TokenType::ClosingBrace {
+                        return;
+                    }
+                },
+                TokenType::While => {
+                    self.check_condition();
+                    self.next_token();
+                    match self.current_token {
+                        TokenType::OpenningBrace => self.check_while_statement(),
+                        _ => self.panic_syntax_error("After while expected body"),
+                    }
+                },
+                TokenType::Type(_) => {
+                    self.check_declare();
+                    self.next_token();
+                },
+                TokenType::Return => {
+                    self.check_return();
+                },
+                _ => {
+                    self.panic_syntax_error("Unexpected token in statement body");                }           
+            }
+        }
+    }
+
+    fn check_while_statement(&mut self) {
+        loop {
+            self.next_token();
+            match self.current_token {
                 TokenType::ClosingBrace => break,
                 TokenType::Identifier(_) => {
                     self.check_primary();
@@ -215,6 +251,9 @@ impl<'a> Analyser<'a> {
                 TokenType::Return => {
                     self.check_return();
                 },
+                TokenType::Break | TokenType::Continue | TokenType::Semicolon => {
+                    continue;
+                }
                 _ => {
                     self.panic_syntax_error("Unexpected token in statement body");                }           
             }
@@ -252,7 +291,7 @@ impl<'a> Analyser<'a> {
         self.next_token();
         match self.current_token {
             TokenType::OpenningBrace => self.check_statement(),
-            _ => self.panic_syntax_error("After if/while expected body"),
+            _ => self.panic_syntax_error("After if expected body"),
         }
         self.next_token();
         if self.current_token == TokenType::Else {
@@ -267,6 +306,9 @@ impl<'a> Analyser<'a> {
                 _ => self.panic_syntax_error("After else expected body or if"),
             }
         }
+        else {
+            return;
+        } 
     }
 
     fn check_primary(&mut self) {
@@ -523,6 +565,7 @@ impl<'a> Analyser<'a> {
                             self.next_token();
                             continue;
                         }
+                        TokenType::ClosingParenthesis => break,
                         _ => self.panic_syntax_error("No comma after arg"),
                     }
                 },

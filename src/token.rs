@@ -12,6 +12,8 @@ pub enum TokenType{
     While,
     For,
     Return,
+    Break,
+    Continue,
 
     Plus,
     Minus,
@@ -74,6 +76,8 @@ impl TokenType {
             "true" => TokenType::Bool(true),
             "false" => TokenType::Bool(false),
             "struct" => TokenType::Struct,
+            "break" => TokenType::Break,
+            "continue" => TokenType::Continue,
             _ => TokenType::Identifier(ident.to_string()),
         }
     }

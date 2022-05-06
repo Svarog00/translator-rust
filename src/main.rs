@@ -31,15 +31,23 @@ fn main() {
         .read_line(&mut line)
         .expect("Something wnt wrong reading line");
     */
-        let mut line2 = "int poopoo() 
+        let mut line2 = "
+        struct pee 
+        {
+            double type;
+        }
+
+        int poopoo() 
         {
             s = r.e + 5 / p[1];
-        }";
+            func(poopoo);
+            
+        }
+        ";
 
         let lexer = Lexer::new(&line2);
         let mut analyser = Analyser::new(lexer);
         analyser.start_analysis();
         break;
     }
-    
 }
