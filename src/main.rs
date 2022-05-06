@@ -18,6 +18,7 @@ use prelude::*;
 fn main() {
     
     loop {
+    /*
         print!("Enter something: ");
         // Stdout needs to be flushed, due to missing newline
         io::stdout()
@@ -29,10 +30,16 @@ fn main() {
         .lock()
         .read_line(&mut line)
         .expect("Something wnt wrong reading line");
+    */
+        let mut line2 = "int poopoo() 
+        {
+            s = r.e + 5 / p[1];
+        }";
 
-        let lexer = Lexer::new(&line);
+        let lexer = Lexer::new(&line2);
         let mut analyser = Analyser::new(lexer);
         analyser.start_analysis();
+        break;
     }
     
 }

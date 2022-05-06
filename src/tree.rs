@@ -33,11 +33,11 @@ impl Tree {
                 nodes.push(Box::new(expression_node.clone()));
             },
             ExpressionNode::CallFunctionNode { arguments , .. } => {
-                    arguments.push(Box::new(expression_node.clone()));
+                arguments.push(Box::new(expression_node.clone()));
             },
             ExpressionNode::DeclareFunctionNode { identifier, 
                 params, body } => {
-
+                
             },
             ExpressionNode::WhileNode { condition, 
                 body } => {

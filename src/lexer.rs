@@ -132,6 +132,18 @@ impl<'a> Lexer<'a>{
         while let Some(&ch) = self.peek_char(){
             if ch.is_digit(10) || ch == '.'{
                 number.push(self.read_char().unwrap());
+
+                if ch == '.' {
+                    while let Some(&ch2) = self.peek_char() {
+                        if ch2.is_digit(10) {
+                            number.push(self.read_char().unwrap());
+                        }
+                        else {
+                            break;
+                        } 
+                    }
+                    break;
+                }
             }
             else {
                 break;  
