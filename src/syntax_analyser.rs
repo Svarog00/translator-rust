@@ -26,9 +26,10 @@ pub struct Analyser<'a>{
     lexer : Lexer<'a>,
     previous_token : TokenType,
     current_token : TokenType,
-    logic_tree : Tree,
     struct_types : Vec<String>,
-    parenthesis_counter : i32,
+    openning_parenthesis_counter : i32,
+    closing_parenthesis_counter : i32,
+
 }
 
 impl<'a> Analyser<'a> {
@@ -37,22 +38,30 @@ impl<'a> Analyser<'a> {
             lexer,
             current_token : TokenType::default(),
             previous_token : TokenType::default(),
-            logic_tree : Tree::new(),
             struct_types : Vec::new(),
-            parenthesis_counter : 0,
+            openning_parenthesis_counter : 0,
+            closing_parenthesis_counter : 0,
         }
     }
 
     pub fn start_analysis(&mut self) -> bool {
         self.next_token();
         while self.current_token != TokenType::Eof {
-            match self.current_token {
+            match &self.current_token {
                 TokenType::Type(_) => {
                     self.check_declare();
                 },
                 TokenType::Struct => {
                     self.check_struct_declare();
                 },
+                TokenType::Identifier( name ) => {
+                    if self.struct_types.contains(&(name.clone())) {
+                        self.check_declare();
+                    }
+                    else {
+                        self.panic_syntax_error("Wrong start token");
+                    }
+                }
                 _ => {
                     self.panic_syntax_error("Wrong start token");
                     return false;
@@ -191,11 +200,16 @@ impl<'a> Analyser<'a> {
     fn check_statement(&mut self) {
         loop {
             self.next_token();
-            match self.current_token {
+            match &self.current_token {
                 TokenType::Semicolon => continue,
                 TokenType::ClosingBrace => break,
-                TokenType::Identifier(_) => {
-                    self.check_primary();
+                TokenType::Identifier( name ) => {
+                    if self.struct_types.contains(name) {
+                        self.check_declare();
+                    } 
+                    else {
+                        self.check_primary();
+                    }
                 },
                 TokenType::If => {
                     self.check_if_state();
@@ -322,7 +336,6 @@ impl<'a> Analyser<'a> {
                 TokenType::Assign => {
                     //Add assign node
                     self.check_assign();
-                    self.next_token();
                 },
                 TokenType::OpenningArray => {
                     //Add array access node
@@ -357,7 +370,7 @@ impl<'a> Analyser<'a> {
 
         match self.current_token {
             TokenType::OpenningParenthesis => {
-                self.parenthesis_counter += 1;
+                self.openning_parenthesis_counter += 1;
                 self.next_token();
             }
             _ => {}
@@ -425,7 +438,7 @@ impl<'a> Analyser<'a> {
 
         match self.current_token{
             TokenType::OpenningParenthesis => {
-                self.parenthesis_counter += 1;
+                self.openning_parenthesis_counter += 1;
                 self.next_token();
             }
             _ => {}
@@ -473,14 +486,11 @@ impl<'a> Analyser<'a> {
         //self.next_token();
         match self.current_token {
             TokenType::ClosingParenthesis => {
-                if self.parenthesis_counter == 0 {
-                    println!("{}", self.parenthesis_counter);
+                self.closing_parenthesis_counter+=1;
+                if self.closing_parenthesis_counter != self.openning_parenthesis_counter {
                     self.panic_syntax_error("Explicit parenthesis")
                 }
-                else {
-                    self.parenthesis_counter -= 1;
-                    self.next_token();
-                }
+                self.next_token();
             }
             _ => {}
         }

@@ -39,6 +39,7 @@ fn main() {
 
         int poopoo() 
         {
+            pee r;
             s = r.e + (5 / p[1]);
             func(poopoo);
             
