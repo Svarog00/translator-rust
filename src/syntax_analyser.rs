@@ -28,6 +28,7 @@ pub struct Analyser<'a>{
     current_token : TokenType,
     logic_tree : Tree,
     struct_types : Vec<String>,
+    parenthesis_counter : i32,
 }
 
 impl<'a> Analyser<'a> {
@@ -38,6 +39,7 @@ impl<'a> Analyser<'a> {
             previous_token : TokenType::default(),
             logic_tree : Tree::new(),
             struct_types : Vec::new(),
+            parenthesis_counter : 0,
         }
     }
 
@@ -217,7 +219,8 @@ impl<'a> Analyser<'a> {
                     self.check_return();
                 },
                 _ => {
-                    self.panic_syntax_error("Unexpected token in statement body");                }           
+                    self.panic_syntax_error("Unexpected token in statement body");               
+                }           
             }
         }
     }
@@ -343,64 +346,23 @@ impl<'a> Analyser<'a> {
             match self.current_token {
                 TokenType::Semicolon => break,
                 _ => {
-                    self.panic_syntax_error("Wrong token after identifier in statement")
+                    self.panic_syntax_error("Expected semicolon after primary in statement")
                 }
             }
         }
     }
 
-    fn check_expression(&mut self) {
-        println!("Entered check expression");
-        self.next_token();
-        match self.current_token {
-            TokenType::Number(_) => {
-                //add this token to expression node
-                self.next_token();
-                match self.current_token {
-                    TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
-                        //Add expression node
-                        self.check_expression();
-                    },
-                    _ => return,
-                }
-            },
-            TokenType::Identifier(_) => {
-                //add this token to expression node
-                self.next_token();
-                match self.current_token {
-                    TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
-                        //Add expression node
-                        self.check_expression();
-                    },
-                    TokenType::Dot => {
-                        //Add struct access node
-                        self.check_struct_access();
-                    },
-                    TokenType::OpenningArray => {
-                        //Add array access node
-                        self.check_array_access_element();
-                    },
-                    TokenType::OpenningParenthesis => {
-                        //Add fuction call node
-                        self.check_func_args();
-                    },
-                    _ => return,
-                }
-            },
-            _ => self.panic_syntax_error("In expression wrong token")
-        }
-        //self.next_token(); 
-        match self.current_token {
-            TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
-                //Add expression node
-                self.check_expression();
-            },
-            _ => return,
-        }
-    }
-
     fn check_assign(&mut self) {
         self.next_token();
+
+        match self.current_token {
+            TokenType::OpenningParenthesis => {
+                self.parenthesis_counter += 1;
+                self.next_token();
+            }
+            _ => {}
+        }
+
         match self.current_token {
             TokenType::Identifier(_) => {
                 self.next_token();
@@ -456,6 +418,82 @@ impl<'a> Analyser<'a> {
             _ => return,
         }
     }
+
+    fn check_expression(&mut self) {
+        println!("Entered check expression");
+        self.next_token();
+
+        match self.current_token{
+            TokenType::OpenningParenthesis => {
+                self.parenthesis_counter += 1;
+                self.next_token();
+            }
+            _ => {}
+        }
+
+        match self.current_token {
+            TokenType::Number(_) => {
+                //add this token to expression node
+                self.next_token();
+                match self.current_token {
+                    TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                        //Add expression node
+                        self.check_expression();
+                    },
+                    _ => return,
+                }
+            },
+            TokenType::Identifier(_) => {
+                //add this token to expression node
+                self.next_token();
+                match self.current_token {
+                    TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                        //Add expression node
+                        self.check_expression();
+                    },
+                    TokenType::Dot => {
+                        //Add struct access node
+                        self.check_struct_access();
+                    },
+                    TokenType::OpenningArray => {
+                        //Add array access node
+                        self.check_array_access_element();
+                        self.next_token();
+                    },
+                    TokenType::OpenningParenthesis => {
+                        //Add fuction call node
+                        self.check_func_args();
+                    },
+                    _ => return,
+                }
+            },
+            _ => self.panic_syntax_error("In expression wrong token")
+        }
+
+        //self.next_token();
+        match self.current_token {
+            TokenType::ClosingParenthesis => {
+                if self.parenthesis_counter == 0 {
+                    println!("{}", self.parenthesis_counter);
+                    self.panic_syntax_error("Explicit parenthesis")
+                }
+                else {
+                    self.parenthesis_counter -= 1;
+                    self.next_token();
+                }
+            }
+            _ => {}
+        }
+        
+        match self.current_token {
+            TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                //Add expression node
+                self.check_expression();
+            },
+            _ => return,
+        }
+    }
+
 
     fn check_condition(&mut self) {
         self.next_token();

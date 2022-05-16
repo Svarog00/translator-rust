@@ -39,7 +39,7 @@ fn main() {
 
         int poopoo() 
         {
-            s = r.e + 5 / p[1];
+            s = r.e + (5 / p[1]);
             func(poopoo);
             
         }

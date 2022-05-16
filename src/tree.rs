@@ -1,42 +1,45 @@
-use std::ops::DerefMut;
+use std::{ops::{DerefMut, Deref}, rc::Rc};
 
 use crate::token::*;
+
+
 
 #[derive(Debug, Clone)]
 pub struct Tree {
     root : ExpressionNode,
-    previous_nodes : Vec<ExpressionNode>,
-    current_node : Box<ExpressionNode>,
+    previous_nodes : Vec<Rc<ExpressionNode>>,
+    current_node : Rc<ExpressionNode>,
 }
 
 impl Tree {
     pub fn new() -> Self {
         Tree {
             root: ExpressionNode::ProgramNode { expressions: Vec::new() },
-            current_node: Box::new(ExpressionNode::new()),
+            current_node: Rc::new(ExpressionNode::new()),
             previous_nodes : Vec::new(),
         }
     }
 
     pub fn add_node_to_current_node(&mut self, expression_node : &ExpressionNode) {
-        match self.current_node.deref_mut() {
-            ExpressionNode::ProgramNode { expressions } => {
-                expressions.push(Box::new(expression_node.clone()));
+        match self.current_node.deref().to_owned() {
+            ExpressionNode::ProgramNode { mut expressions } => {
+                expressions.push(Rc::new(expression_node.clone()));
+                self.previous_nodes.push(self.current_node.clone());
             },
-            ExpressionNode::StatementNode { nodes } => {
-                nodes.push(Box::new(expression_node.clone()));
+            ExpressionNode::StatementNode { mut nodes } => {
+                nodes.push(Rc::new(expression_node.clone()));
             },
-            ExpressionNode::BinaryOperation { right_operand, .. } => {
-                *right_operand = Box::new(expression_node.clone());
+            ExpressionNode::BinaryOperation { mut right_operand, .. } => {
+                right_operand = Rc::new(expression_node.clone());
             },
-            ExpressionNode::ConditionNode { nodes } => {
-                nodes.push(Box::new(expression_node.clone()));
+            ExpressionNode::ConditionNode { mut nodes } => {
+                nodes.push(Rc::new(expression_node.clone()));
             },
-            ExpressionNode::CallFunctionNode { arguments , .. } => {
-                arguments.push(Box::new(expression_node.clone()));
+            ExpressionNode::CallFunctionNode { mut arguments , .. } => {
+                arguments.push(Rc::new(expression_node.clone()));
             },
             ExpressionNode::DeclareFunctionNode { identifier, 
-                params, body } => {
+                params, body, return_type } => {
                 
             },
             ExpressionNode::WhileNode { condition, 
@@ -72,60 +75,65 @@ impl Tree {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub enum ExpressionNode {
     None,
     ProgramNode {
-        expressions : Vec<Box<ExpressionNode>>,
+        expressions : Vec<Rc<ExpressionNode>>,
     },
     ConstNode {
         number : TokenType, //number
     },
+    DeclareVar {
+        var_node : Rc<ExpressionNode>, //VarNode
+        expression : Rc<ExpressionNode>, //assign operations
+    },
     VarNode {
-        identifier : TokenType, //id
         var_type : TokenType,
+        identifier : TokenType, //id
     },
     StatementNode {
-        nodes : Vec<Box<ExpressionNode>>,
+        nodes : Vec<Rc<ExpressionNode>>,
     },
     BinaryOperation {
         operator : TokenType,
-        left_operand : Box<ExpressionNode>, //var node
-        right_operand : Box<ExpressionNode>,//var or function call or bin operation or array access or struct access
+        left_operand : Rc<ExpressionNode>, //var node
+        right_operand : Rc<ExpressionNode>,//var or function call or bin operation or array access or struct access
     },
     ConditionNode {
-        nodes : Vec<Box<ExpressionNode>>, //var nodes or bin operation
+        nodes : Vec<Rc<ExpressionNode>>, //var nodes or bin operation
     },
     CallFunctionNode {
         identifier : TokenType,
-        arguments : Vec<Box<ExpressionNode>>, //var nodes or bin operation
+        arguments : Vec<Rc<ExpressionNode>>, //var nodes or bin operation
     },
     DeclareFunctionNode {
+        return_type : TokenType,
         identifier : TokenType,
-        params : Vec<Box<ExpressionNode>>, //var nodes
-        body : Box<ExpressionNode> //statement node
+        params : Vec<Rc<ExpressionNode>>, //var nodes
+        body : Rc<ExpressionNode> //statement node
     },
     //Primary node for if/while
     WhileNode {
-        condition : Box<ExpressionNode>,
-        body : Box<ExpressionNode>,
+        condition : Rc<ExpressionNode>,
+        body : Rc<ExpressionNode>,
     },
     IfNode {
-        condition : Box<ExpressionNode>,
-        body : Box<ExpressionNode>,
-        _else : Box<ExpressionNode>,
+        condition : Rc<ExpressionNode>,
+        body : Rc<ExpressionNode>,
+        _else : Rc<ExpressionNode>,
     },
     ElseNode {
-        _if : Box<ExpressionNode>,
-        body : Box<ExpressionNode>,
+        _if : Rc<ExpressionNode>,
+        body : Rc<ExpressionNode>,
     },
     ArrayDeclareNode {
         identifier : TokenType,
-        elements_number : Box<ExpressionNode>, //id or number or expression
+        elements_number : Rc<ExpressionNode>, //id or number or expression
     },
     ArrayAccessNode {
         identifier : TokenType,
-        elements_number : Box<ExpressionNode>, //variable node or binary operation
+        elements_number : Rc<ExpressionNode>, //variable node or binary operation
     },
     StructDeclareNode {
         identifier : TokenType,
@@ -133,7 +141,7 @@ pub enum ExpressionNode {
     },
     StructAccessNode {
         identifier : TokenType,
-        field : Box<ExpressionNode>, //can be multiple struct access nodes
+        field : Rc<ExpressionNode>, //can be multiple struct access nodes
     },
 }
 
@@ -160,6 +168,5 @@ impl ExpressionNode {
             nodes : Vec::new(), 
         }
     }
-
-    
 }
+
