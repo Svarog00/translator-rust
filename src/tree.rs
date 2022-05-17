@@ -24,19 +24,23 @@ impl Tree {
         match self.current_node.deref().to_owned() {
             ExpressionNode::ProgramNode { mut expressions } => {
                 expressions.push(Rc::new(expression_node.clone()));
-                self.previous_nodes.push(self.current_node.clone());
+
             },
             ExpressionNode::StatementNode { mut nodes } => {
                 nodes.push(Rc::new(expression_node.clone()));
+
             },
             ExpressionNode::BinaryOperation { mut right_operand, .. } => {
                 right_operand = Rc::new(expression_node.clone());
+
             },
             ExpressionNode::ConditionNode { mut nodes } => {
                 nodes.push(Rc::new(expression_node.clone()));
+
             },
             ExpressionNode::CallFunctionNode { mut arguments , .. } => {
                 arguments.push(Rc::new(expression_node.clone()));
+                
             },
             ExpressionNode::DeclareFunctionNode { identifier, 
                 params, body, return_type } => {
@@ -47,7 +51,7 @@ impl Tree {
 
             },
             ExpressionNode::ArrayDeclareNode { identifier, 
-                elements_number } => {
+                elements_number, var_type } => {
 
             },
             ExpressionNode::ArrayAccessNode { identifier, 
@@ -128,6 +132,7 @@ pub enum ExpressionNode {
         body : Rc<ExpressionNode>,
     },
     ArrayDeclareNode {
+        var_type : TokenType,
         identifier : TokenType,
         elements_number : Rc<ExpressionNode>, //id or number or expression
     },

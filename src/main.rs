@@ -32,17 +32,25 @@ fn main() {
         .expect("Something wnt wrong reading line");
     */
         let mut line2 = "
-        struct pee 
+        struct stru 
         {
             double type;
         }
 
-        int poopoo() 
+        int poopoo(int t) 
         {
-            pee r;
-            s = r.e + (5 / p[1]);
+            if(x && y + 1 == true || t || )
+            {
+                
+            }
+
+            int arr[2];
+            stru r;
+            r = 5;
+            s = r.e + (5 / p[1]) - true;
             func(poopoo);
-            
+
+            return 4 + t;
         }
         ";
 

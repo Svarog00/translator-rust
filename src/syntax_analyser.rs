@@ -30,6 +30,8 @@ pub struct Analyser<'a>{
     openning_parenthesis_counter : i32,
     closing_parenthesis_counter : i32,
 
+    tmp_name : String,
+    tmp_type : String,
 }
 
 impl<'a> Analyser<'a> {
@@ -41,14 +43,20 @@ impl<'a> Analyser<'a> {
             struct_types : Vec::new(),
             openning_parenthesis_counter : 0,
             closing_parenthesis_counter : 0,
+
+            tmp_name : String::new(),
+            tmp_type : String::new(),
         }
     }
 
     pub fn start_analysis(&mut self) -> bool {
         self.next_token();
+        println!("Program");
         while self.current_token != TokenType::Eof {
             match &self.current_token {
-                TokenType::Type(_) => {
+                TokenType::Type( name ) => {
+                    self.tmp_type = name.clone();
+
                     self.check_declare();
                 },
                 TokenType::Struct => {
@@ -56,6 +64,10 @@ impl<'a> Analyser<'a> {
                 },
                 TokenType::Identifier( name ) => {
                     if self.struct_types.contains(&(name.clone())) {
+                        
+                        self.tmp_type = name.clone();
+                        println!("{}", self.tmp_type);
+
                         self.check_declare();
                     }
                     else {
@@ -88,12 +100,19 @@ impl<'a> Analyser<'a> {
 
     fn check_declare(&mut self) {
         self.next_token();
-        match self.current_token {
-            TokenType::Identifier(_) => {
+        match &self.current_token {
+            TokenType::Identifier( name ) => {
+                self.tmp_name = name.clone();
+
                 self.next_token();
                 match self.current_token {
                     TokenType::OpenningParenthesis => {
                         //Add func node to AST
+                        
+                        println!("FunctionDeclare");
+                        println!("  {}", self.tmp_type);
+                        println!("  {}", self.tmp_name);
+
                         self.check_func_params();
                         self.next_token();
                         match self.current_token {
@@ -108,10 +127,17 @@ impl<'a> Analyser<'a> {
                     },
                     TokenType::Semicolon => {
                         //Add var node to AST
+
+                        println!("VarDeclare");
+                        println!("  {}", self.tmp_name);
+                        println!("  {}", self.tmp_type);
+                        
                         return;
                     },
                     TokenType::OpenningArray => {
                         //add array decl node
+                        println!("ArrayDeclare");
+                        println!("  {}", self.tmp_name);
                         self.check_array_declare();
                     },
                     TokenType::Assign => {
@@ -128,8 +154,11 @@ impl<'a> Analyser<'a> {
     fn check_func_params(&mut self) {
         loop {
             self.next_token();
-            match self.current_token {
-                TokenType::Type(_) => {
+            match &self.current_token {
+                TokenType::Type( name ) => {
+
+                    self.tmp_type = name.clone();
+
                     self.check_var();
                     self.next_token();
                     match self.current_token {
@@ -146,9 +175,12 @@ impl<'a> Analyser<'a> {
 
     fn check_var(&mut self) {
         self.next_token();
-        match self.current_token {
-            TokenType::Identifier(_) => {
+        match &self.current_token {
+            TokenType::Identifier(name) => {
                 //Add var node in AST
+                println!("VarDeclare"); 
+                println!("  {}", name);
+                println!("  {}", self.tmp_type);
             },
             _ => self.panic_syntax_error("After type declaration must go identifier"),
         }
@@ -156,12 +188,17 @@ impl<'a> Analyser<'a> {
 
     fn check_array_declare(&mut self) {
         self.next_token();
-        match self.current_token {
-            TokenType::Number(_) => {
+        match &self.current_token {
+            TokenType::Number(name) => {
                 //Add array node with number in count
+                self.tmp_name = name.clone();
+                println!("  {}", self.tmp_name); 
+
                 self.next_token();
                 match self.current_token {
-                    TokenType::Plus | TokenType::Multi | TokenType::Minus | TokenType::Divide => {
+                    TokenType::Plus | TokenType::Multi | 
+                    TokenType::Minus | TokenType::Divide => {
+                        println!("{:?}", self.current_token);
                         self.check_expression();
                     }
                     TokenType::ClosingArray => {
@@ -174,11 +211,17 @@ impl<'a> Analyser<'a> {
                 //Add array node with 0 in count
                 return;
             }
-            TokenType::Identifier(_) =>{
+            TokenType::Identifier(name) =>{
                 //Add array node with identifier in count
+                self.tmp_name = name.clone();
+                println!("  {}", self.tmp_name);
+
                 self.next_token();
                 match self.current_token {
-                    TokenType::Plus | TokenType::Multi | TokenType::Minus | TokenType::Divide => {
+                    TokenType::Plus | TokenType::Multi | 
+                    TokenType::Minus | TokenType::Divide => {
+                        println!("{:?}", self.current_token);
+
                         self.check_expression();
                     }
                     TokenType::ClosingArray => {
@@ -205,9 +248,13 @@ impl<'a> Analyser<'a> {
                 TokenType::ClosingBrace => break,
                 TokenType::Identifier( name ) => {
                     if self.struct_types.contains(name) {
+                        self.tmp_type = name.clone();
+
                         self.check_declare();
                     } 
                     else {
+                        self.tmp_name = name.clone();
+
                         self.check_primary();
                     }
                 },
@@ -218,6 +265,8 @@ impl<'a> Analyser<'a> {
                     }
                 },
                 TokenType::While => {
+                    println!("While");
+
                     self.check_condition();
                     self.next_token();
                     match self.current_token {
@@ -242,10 +291,19 @@ impl<'a> Analyser<'a> {
     fn check_while_statement(&mut self) {
         loop {
             self.next_token();
-            match self.current_token {
+            match &self.current_token {
                 TokenType::ClosingBrace => break,
-                TokenType::Identifier(_) => {
-                    self.check_primary();
+                TokenType::Identifier( name ) => {
+                    if self.struct_types.contains(name) {
+                        self.tmp_type = name.clone();
+                        
+                        self.check_declare();
+                    }
+                    else {
+                        self.tmp_name = name.clone();
+
+                        self.check_primary();
+                    }
                 },
                 TokenType::If => {
                     self.check_if_state();
@@ -272,25 +330,42 @@ impl<'a> Analyser<'a> {
                     continue;
                 }
                 _ => {
-                    self.panic_syntax_error("Unexpected token in statement body");                }           
+                    self.panic_syntax_error("Unexpected token in statement body");                
+                }           
             }
         }
     }
 
     fn check_return(&mut self){
+        println!("Return");
         self.next_token();
-        match self.current_token {
-            TokenType::Number(_) | TokenType::Identifier(_) | TokenType::Bool(_) => {
+        match &self.current_token {
+            TokenType::Number( name ) | TokenType::Identifier( name ) | TokenType::Bool( name ) => {
+                self.tmp_name = name.clone();
+                
                 self.next_token();
                 match self.current_token {
-                    TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                    TokenType::Plus | TokenType::Minus | 
+                    TokenType::Multi | TokenType::Divide => {
                         //Add expression node
+                        println!("{}", self.tmp_name);                           
+                        println!("{:?}", self.current_token);
+
                         self.check_expression();
                     },
-                    TokenType::Equal => {
+                    TokenType::Equal | TokenType::NotEqual | 
+                    TokenType::GreaterOrEqual | TokenType::GreaterThan |
+                    TokenType::LowerThan | TokenType::LowerOrEqual => {
+                        println!("{}", self.tmp_name);  
+                        println!("{:?}", self.current_token);
+
                         self.check_equation();
                     }
-                    TokenType::Semicolon => return,
+                    TokenType::Semicolon => {
+                        println!("{}", self.tmp_name);
+
+                        return;
+                    }
                     _ => self.panic_syntax_error("Wrong token after return expression"),
                 }
             }
@@ -304,7 +379,17 @@ impl<'a> Analyser<'a> {
     }
 
     fn check_if_state(&mut self) {
-        self.check_condition();
+        println!("If");
+
+        self.next_token();
+        match self.current_token {
+            TokenType::OpenningParenthesis => {
+                self.check_condition();
+            }
+            _ => self.panic_syntax_error("Expected condition after if"),
+        }
+
+        //self.check_condition();
         self.next_token();
         match self.current_token {
             TokenType::OpenningBrace => self.check_statement(),
@@ -312,6 +397,8 @@ impl<'a> Analyser<'a> {
         }
         self.next_token();
         if self.current_token == TokenType::Else {
+            println!("Else");
+
             self.next_token();
             match self.current_token {
                 TokenType::OpenningBrace => {
@@ -329,7 +416,6 @@ impl<'a> Analyser<'a> {
     }
 
     fn check_primary(&mut self) {
-        println!("Check primary");
         self.next_token();
         loop {
             match self.current_token {
@@ -339,16 +425,23 @@ impl<'a> Analyser<'a> {
                 },
                 TokenType::OpenningArray => {
                     //Add array access node
+                    println!("{}", self.tmp_name);
+
                     self.check_array_access_element();
+                    self.next_token();
                     
                 }, 
                 TokenType::OpenningParenthesis => {
                     //Add func call node (id, node args (id, num list))
+                    println!("{}", self.tmp_name);
+
                     self.check_func_args();
                     self.next_token();
                 },
                 TokenType::Dot => {
                     //add struct access node
+                    println!("{}", self.tmp_name);
+
                     self.check_struct_access();
                     continue;
                 },
@@ -366,26 +459,27 @@ impl<'a> Analyser<'a> {
     }
 
     fn check_assign(&mut self) {
+        println!("Assign");
+        println!("{}", self.tmp_name);
+
         self.next_token();
 
-        match self.current_token {
-            TokenType::OpenningParenthesis => {
-                self.openning_parenthesis_counter += 1;
-                self.next_token();
-            }
-            _ => {}
-        }
+        match &self.current_token {
+            TokenType::Identifier(name) => {
+                self.tmp_name = name.clone();
+                println!("{}", self.tmp_name);
 
-        match self.current_token {
-            TokenType::Identifier(_) => {
                 self.next_token();
                 match self.current_token {
                     TokenType::Semicolon => {
                         //Add in assign node this token type
                         return;
                     },
-                    TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                    TokenType::Plus | TokenType::Minus | 
+                    TokenType::Multi | TokenType::Divide => {
                         //Add expression node
+                        println!("{:?}", self.current_token);
+
                         self.check_expression();
                     },
                     TokenType::OpenningParenthesis => {
@@ -401,15 +495,21 @@ impl<'a> Analyser<'a> {
                     _ => self.panic_syntax_error("In assign occurred error"),
                 }
             },
-            TokenType::Number(_) => {
+            TokenType::Number(name) => {
+                self.tmp_name = name.clone();
+                println!("{}", self.tmp_name);
+
                 self.next_token();
                 match self.current_token {
                     TokenType::Semicolon => {
                         //Add in assign node this token type
                         return;
                     },
-                    TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                    TokenType::Plus | TokenType::Minus | 
+                    TokenType::Multi | TokenType::Divide => {
                         //Add expression node
+                        println!("{:?}", self.current_token);
+
                         self.check_expression();
                     },
                     TokenType::OpenningParenthesis => {
@@ -424,8 +524,11 @@ impl<'a> Analyser<'a> {
 
         //self.next_token();
         match self.current_token {
-            TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+            TokenType::Plus | TokenType::Minus | 
+            TokenType::Multi | TokenType::Divide => {
                 //Add expression node
+                println!("{:?}", self.current_token);
+
                 self.check_expression();
             },
             _ => return,
@@ -433,7 +536,6 @@ impl<'a> Analyser<'a> {
     }
 
     fn check_expression(&mut self) {
-        println!("Entered check expression");
         self.next_token();
 
         match self.current_token{
@@ -444,24 +546,36 @@ impl<'a> Analyser<'a> {
             _ => {}
         }
 
-        match self.current_token {
-            TokenType::Number(_) => {
+        match &self.current_token {
+            TokenType::Number(name) | TokenType::Bool(name)=> {
                 //add this token to expression node
+                self.tmp_name = name.clone();
+                println!("{}", self.tmp_name);
+
                 self.next_token();
                 match self.current_token {
-                    TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                    TokenType::Plus | TokenType::Minus | 
+                    TokenType::Multi | TokenType::Divide => {
                         //Add expression node
+                        println!("{:?}", self.current_token);
+                        
                         self.check_expression();
                     },
                     _ => return,
                 }
             },
-            TokenType::Identifier(_) => {
+            TokenType::Identifier(name) => {
                 //add this token to expression node
+                self.tmp_name = name.clone();
+                println!("{}", self.tmp_name);
+
                 self.next_token();
                 match self.current_token {
-                    TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                    TokenType::Plus | TokenType::Minus | 
+                    TokenType::Multi | TokenType::Divide => {
                         //Add expression node
+                        println!("{:?}", self.current_token);
+                        
                         self.check_expression();
                     },
                     TokenType::Dot => {
@@ -498,6 +612,8 @@ impl<'a> Analyser<'a> {
         match self.current_token {
             TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
                 //Add expression node
+                println!("{:?}", self.current_token);
+
                 self.check_expression();
             },
             _ => return,
@@ -506,38 +622,53 @@ impl<'a> Analyser<'a> {
 
 
     fn check_condition(&mut self) {
-        self.next_token();
-        match self.current_token {
-            TokenType::OpenningParenthesis => {
+        //self.next_token();
+        //match self.current_token {
+        //    TokenType::OpenningParenthesis => {
                 //add condition node
-                loop {
+                //loop {
                     self.next_token();
-                    match self.current_token {
-                        TokenType::Identifier(_) | TokenType::Number(_) | TokenType::Bool(_) => {
+                    match &self.current_token {
+                        TokenType::Identifier(name) | TokenType::Number(name) 
+                        | TokenType::Bool(name) => {
+                            self.tmp_name = name.clone();
+                            println!("{}", self.tmp_name);
+
                             self.next_token();
                             match self.current_token {
-                                TokenType::Equal => {
+                                TokenType::Equal | TokenType::NotEqual | 
+                                TokenType::GreaterOrEqual | TokenType::GreaterThan |
+                                TokenType::LowerThan | TokenType::LowerOrEqual => {
+                                    println!("{:?}", self.current_token);
+
                                     self.check_equation();
                                 }
-                                TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                                TokenType::Plus | TokenType::Minus | 
+                                TokenType::Multi | TokenType::Divide => {
+                                    println!("{:?}", self.current_token);
+                                    
                                     self.check_expression();
                                 }
                                 TokenType::And | TokenType::Or => {
                                     //add bin operator in tree
-                                    continue;
+                                    println!("{:?}", self.current_token);
+                                    self.check_condition();
+                                    //continue;
                                     /*match self.current_token {
                                         TokenType::ClosingParenthesis => break,
                                         _ => continue,
                                     }*/
                                 }
-                                TokenType::ClosingParenthesis => break,
+                                TokenType::ClosingParenthesis => return,
                                 _ => self.panic_syntax_error("After id expected cl. parenthesis, logic op or math. sign"),
                             }
-
+                            /*
                             match self.current_token {
                                 TokenType::ClosingParenthesis => break,
                                 TokenType::And | TokenType::Or => {
                                     //add bin operator in tree
+                                    println!("{:?}", self.current_token);
+
                                     continue;
                                     /*self.next_token();
                                     match self.current_token {
@@ -546,29 +677,43 @@ impl<'a> Analyser<'a> {
                                     }*/
 
                                 }
+                                TokenType::Equal | TokenType::NotEqual | 
+                                TokenType::GreaterOrEqual | TokenType::GreaterThan |
+                                TokenType::LowerThan | TokenType::LowerOrEqual => {
+                                    println!("{:?}", self.current_token);
+
+                                    self.check_equation();
+                                }
                                 _ => self.panic_syntax_error("Expected logic op or closing parenth"),
-                            }
+                            }*/
                         },
                         TokenType::ClosingParenthesis => {
-                            break;
+                            return;
                         },
                         _ => self.panic_syntax_error("Expected closing parenth, number, bool or id"),
                     }
                 }
-            }
-            _ => self.panic_syntax_error("Expected openning parenthesis after if/while"),
-        }
-    }
+            //}
+    //        _ => self.panic_syntax_error("Expected openning parenthesis after if/while"),
+    //    }
+    //}
 
     fn check_equation(&mut self) {
         //add new equation node
+
         self.next_token();
-        match self.current_token {
-            TokenType::Identifier(_) | TokenType::Number(_) => {
+        match &self.current_token {
+            TokenType::Identifier(name) | TokenType::Number(name) | TokenType::Bool(name)=> {
+                self.tmp_name = name.clone();
+                println!("{}", self.tmp_name);
+                
                 self.next_token();
                 match self.current_token {
-                    TokenType::Plus | TokenType::Minus | TokenType::Multi | TokenType::Divide => {
+                    TokenType::Plus | TokenType::Minus | 
+                    TokenType::Multi | TokenType::Divide => {
                         //add bin operation node
+                        println!("{:?}", self.current_token);
+
                         self.check_expression();
                     },
                     _ => return,
@@ -580,9 +725,12 @@ impl<'a> Analyser<'a> {
 
     fn check_array_access_element(&mut self) {
         self.next_token();
-        match self.current_token {
+        match &self.current_token {
             //Add array access
-            TokenType::Identifier(_) | TokenType:: Number(_) => {
+            TokenType::Identifier(name) | TokenType:: Number(name) => {
+                self.tmp_name = name.clone();
+                println!("{}", self.tmp_name);
+                
                 self.next_token();
                 match self.current_token {
                     TokenType::ClosingArray => {
@@ -601,12 +749,16 @@ impl<'a> Analyser<'a> {
     fn check_func_args(&mut self) {
         self.next_token();
         loop {
-            match self.current_token {
-                TokenType::Identifier(_) | TokenType::Number(_) => {
+            match &self.current_token {
+                TokenType::Identifier(name) | TokenType::Number(name) => {
                     //Add id or number in node
+                    self.tmp_name = name.clone();
+                    println!("  {}", self.tmp_name);
+                    
                     self.next_token();
                     match self.current_token {
-                        TokenType::Multi | TokenType::Plus | TokenType::Minus | TokenType::Divide => {
+                        TokenType::Multi | TokenType::Plus | 
+                        TokenType::Minus | TokenType::Divide => {
                             self.check_expression();
                         },
                         TokenType::Comma => {
@@ -626,10 +778,14 @@ impl<'a> Analyser<'a> {
     }
 
     fn check_struct_declare(&mut self) {
+        println!("StructDeclare");
         self.next_token();
         match &self.current_token {
             TokenType::Identifier( identifier ) => {
+                println!("  {}", identifier);
+
                 self.struct_types.push(identifier.to_string());
+
                 self.next_token();
                 match self.current_token {
                     TokenType::OpenningBrace => {
@@ -645,8 +801,22 @@ impl<'a> Analyser<'a> {
     fn check_struct_body(&mut self) {
         loop {
             self.next_token();
-            match self.current_token {
-                TokenType::Type(_) => {
+            match &self.current_token {
+                TokenType::Identifier( name ) => {
+                    if self.struct_types.contains(name) {
+                        self.tmp_type = name.clone();
+                        
+                        self.check_declare();
+                    }
+                    else {
+                        self.tmp_name = name.clone();
+
+                        self.check_primary();
+                    }
+                },
+                TokenType::Type(name) => {
+                    self.tmp_type = name.clone();
+
                     self.check_var();
                     self.next_token();
                     match self.current_token {
@@ -663,8 +833,11 @@ impl<'a> Analyser<'a> {
     fn check_struct_access(&mut self) {
         //add struct field access
         self.next_token();
-        match self.current_token {
-            TokenType::Identifier(_) => {
+        match &self.current_token {
+            TokenType::Identifier(name) => {
+                self.tmp_name = name.clone();
+                println!("{}", self.tmp_name);
+
                 self.next_token();
                 if self.current_token == TokenType::Dot {
                     self.check_struct_access();

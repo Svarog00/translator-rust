@@ -51,7 +51,7 @@ pub enum TokenType{
 
     //--Types
     Number(String),
-    Bool(bool),
+    Bool(String),
     Double(String),
 }
 
@@ -73,8 +73,8 @@ impl TokenType {
             "else" => TokenType::Else,
             "for" => TokenType::For,
             "return" => TokenType::Return,
-            "true" => TokenType::Bool(true),
-            "false" => TokenType::Bool(false),
+            "true" => TokenType::Bool(ident.to_string()),
+            "false" => TokenType::Bool(ident.to_string()),
             "struct" => TokenType::Struct,
             "break" => TokenType::Break,
             "continue" => TokenType::Continue,
