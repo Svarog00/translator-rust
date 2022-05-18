@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use std::vec::*;
+use std::{vec::*, collections::VecDeque};
 
 //statement - внутри {}
 //expr - операции с переменными внутри statement
@@ -32,6 +32,8 @@ pub struct Analyser<'a>{
 
     tmp_name : String,
     tmp_type : String,
+
+    token_vec : VecDeque<TokenType>,
 }
 
 impl<'a> Analyser<'a> {
@@ -46,10 +48,12 @@ impl<'a> Analyser<'a> {
 
             tmp_name : String::new(),
             tmp_type : String::new(),
+
+            token_vec : VecDeque::<TokenType>::new(),
         }
     }
 
-    pub fn start_analysis(&mut self) -> bool {
+    pub fn start_analysis(&mut self) -> VecDeque<TokenType> {
         self.next_token();
         println!("Program");
         while self.current_token != TokenType::Eof {
@@ -76,7 +80,7 @@ impl<'a> Analyser<'a> {
                 }
                 _ => {
                     self.panic_syntax_error("Wrong start token");
-                    return false;
+                    return VecDeque::new();
                 },
             }
 
@@ -85,7 +89,9 @@ impl<'a> Analyser<'a> {
                 self.next_token();
             }
         }
-        true
+
+
+        self.token_vec.clone()
     }
 
     fn panic_syntax_error(&self, message : &str) {
@@ -95,7 +101,7 @@ impl<'a> Analyser<'a> {
     fn next_token(&mut self) {
         self.previous_token = self.current_token.clone();
         self.current_token = self.lexer.next_token();
-        println!("Parser got {:?} token", self.current_token);
+        self.token_vec.push_back(self.current_token.clone());
     }
 
     fn check_declare(&mut self) {
@@ -580,6 +586,8 @@ impl<'a> Analyser<'a> {
                     },
                     TokenType::Dot => {
                         //Add struct access node
+                        println!("{}", self.tmp_name);
+
                         self.check_struct_access();
                     },
                     TokenType::OpenningArray => {
@@ -826,6 +834,7 @@ impl<'a> Analyser<'a> {
         match &self.current_token {
             TokenType::Identifier(name) => {
                 self.tmp_name = name.clone();
+                println!("StructAccessNode");
                 println!("{}", self.tmp_name);
 
                 self.next_token();

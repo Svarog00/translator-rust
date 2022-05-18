@@ -34,10 +34,10 @@ fn main() {
         let mut line2 = "
         struct stru 
         {
-            double type;
+            double g;
         }
 
-        int poopoo(int t) 
+        int poopoo(int t, double a) 
         {
             if(x && y + 1 == true || t || w && e)
             {
@@ -56,7 +56,8 @@ fn main() {
 
         let lexer = Lexer::new(&line2);
         let mut analyser = Analyser::new(lexer);
-        analyser.start_analysis();
+        let mut ast_tree = Ast_tree::new(analyser.start_analysis());
+        ast_tree.write_out();
         break;
     }
 }

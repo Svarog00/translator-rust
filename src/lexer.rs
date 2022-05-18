@@ -173,5 +173,5 @@ impl<'a> Lexer<'a>{
 }
 
 fn is_letter(ch: char) -> bool{
-    ch.is_alphabetic() || ch == '_'
+    ch.is_alphabetic()
 }

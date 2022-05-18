@@ -1,8 +1,6 @@
-use std::{ops::{DerefMut, Deref}, rc::Rc};
+use std::{ops::{DerefMut, Deref}, rc::Rc, collections::VecDeque};
 
 use crate::token::*;
-
-
 
 #[derive(Debug, Clone)]
 pub struct Tree {
@@ -175,3 +173,96 @@ impl ExpressionNode {
     }
 }
 
+
+pub struct Ast_tree {
+    token_list : VecDeque<TokenType>,
+    space_counter : u32,
+    current_token : TokenType,
+    previous_token : TokenType,
+    current_id : u32,
+}
+
+impl Ast_tree {
+    pub fn new(new_token_list : VecDeque<TokenType>) -> Self {
+        Ast_tree { 
+            token_list : new_token_list,
+            space_counter : 0,
+
+            current_token : TokenType::default(),
+            previous_token : TokenType::default(),
+
+            current_id : 0,
+        }
+    }
+
+    pub fn write_out(&mut self) {
+        println!("Program");
+        self.space_counter += 1;
+        self.out_spaces();
+        while self.current_token != TokenType::Eof {
+            self.next_token();
+            match &self.current_token {
+                TokenType::Type(name) => {
+                    self.next_token();        
+    
+                }
+                TokenType::Struct => {
+                    println!("StructDeclare");
+                    
+                    self.space_counter += 1;
+                    self.out_spaces();
+                    self.struct_declare();
+                    self.space_counter -= 1;
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn struct_declare(&mut self) {
+        self.next_token();
+        match &self.current_token {
+            TokenType::Identifier(name) => {
+                println!("{}", name);
+                self.struct_body();
+            }
+            _ => {}
+        }
+    }
+
+    fn struct_body(&mut self) {
+        loop {
+            self.next_token();
+            match &self.current_token {
+                TokenType::Type(name) => {
+                    
+                }
+                TokenType::OpenningBrace => {
+                    continue;
+                }
+                TokenType::ClosingBrace => {
+                    break;
+                }
+    
+            }
+        }
+    }
+
+    fn var(&mut self) {
+        
+    }
+
+    fn next_token(&mut self) {
+        self.previous_token = self.current_token.clone();
+        self.current_token = self.token_list.pop_front().unwrap();
+        self.current_id+=1;
+    }
+
+    fn out_spaces(&mut self) {
+        let mut i = 0;
+        while i < self.space_counter {
+            print!(" ");
+            i+=1;
+        }
+    }
+}
