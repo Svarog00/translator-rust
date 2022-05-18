@@ -654,28 +654,18 @@ impl<'a> Analyser<'a> {
                                     println!("{:?}", self.current_token);
                                     self.check_condition();
                                     //continue;
-                                    /*match self.current_token {
-                                        TokenType::ClosingParenthesis => break,
-                                        _ => continue,
-                                    }*/
                                 }
                                 TokenType::ClosingParenthesis => return,
                                 _ => self.panic_syntax_error("After id expected cl. parenthesis, logic op or math. sign"),
                             }
-                            /*
+                            
                             match self.current_token {
-                                TokenType::ClosingParenthesis => break,
+                                TokenType::ClosingParenthesis => return,
                                 TokenType::And | TokenType::Or => {
                                     //add bin operator in tree
                                     println!("{:?}", self.current_token);
-
-                                    continue;
-                                    /*self.next_token();
-                                    match self.current_token {
-                                        TokenType::ClosingParenthesis => break,
-                                        _ => continue,
-                                    }*/
-
+                                    self.check_condition();
+                                    //continue
                                 }
                                 TokenType::Equal | TokenType::NotEqual | 
                                 TokenType::GreaterOrEqual | TokenType::GreaterThan |
@@ -685,7 +675,7 @@ impl<'a> Analyser<'a> {
                                     self.check_equation();
                                 }
                                 _ => self.panic_syntax_error("Expected logic op or closing parenth"),
-                            }*/
+                            }
                         },
                         TokenType::ClosingParenthesis => {
                             return;

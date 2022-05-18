@@ -39,7 +39,7 @@ fn main() {
 
         int poopoo(int t) 
         {
-            if(x && y + 1 == true || t || )
+            if(x && y + 1 == true || t || w && e)
             {
                 
             }
