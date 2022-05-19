@@ -180,6 +180,9 @@ pub struct Ast_tree {
     current_token : TokenType,
     previous_token : TokenType,
     current_id : u32,
+
+    tmp_name : String,
+    tmp_type : String,
 }
 
 impl Ast_tree {
@@ -192,6 +195,9 @@ impl Ast_tree {
             previous_token : TokenType::default(),
 
             current_id : 0,
+
+            tmp_name : String::new(),
+            tmp_type : String::new(),
         }
     }
 
@@ -199,12 +205,20 @@ impl Ast_tree {
         println!("Program");
         self.space_counter += 1;
         self.out_spaces();
-        while self.current_token != TokenType::Eof {
+        loop {
             self.next_token();
             match &self.current_token {
+                TokenType::Identifier(name) => {
+                    self.tmp_type = name.clone();
+                    self.space_counter += 1;
+                    self.declare();
+                    self.space_counter -= 1;
+                }
                 TokenType::Type(name) => {
-                    self.next_token();        
-    
+                    self.tmp_type = name.clone();
+                    self.space_counter += 1;       
+                    self.declare();
+                    self.space_counter -= 1;
                 }
                 TokenType::Struct => {
                     println!("StructDeclare");
@@ -212,9 +226,14 @@ impl Ast_tree {
                     self.space_counter += 1;
                     self.out_spaces();
                     self.struct_declare();
-                    self.space_counter -= 1;
+                    self.space_counter -= 2;
                 }
-                _ => {}
+                TokenType::Eof => {
+                    break;
+                }
+                _ => {
+                    continue;
+                } 
             }
         }
     }
@@ -224,7 +243,9 @@ impl Ast_tree {
         match &self.current_token {
             TokenType::Identifier(name) => {
                 println!("{}", name);
+                self.space_counter += 1;
                 self.struct_body();
+                self.space_counter -= 1;
             }
             _ => {}
         }
@@ -235,7 +256,15 @@ impl Ast_tree {
             self.next_token();
             match &self.current_token {
                 TokenType::Type(name) => {
-                    
+                    self.tmp_type = name.clone();
+                    self.var();
+                    self.next_token();
+                    match self.current_token {
+                        TokenType::Semicolon => {
+                            continue;
+                        }
+                        _ => {}
+                    }
                 }
                 TokenType::OpenningBrace => {
                     continue;
@@ -243,13 +272,113 @@ impl Ast_tree {
                 TokenType::ClosingBrace => {
                     break;
                 }
-    
+                _ => {}
             }
         }
     }
 
+    fn declare(&mut self){
+        self.next_token();
+        match &self.current_token {
+            TokenType::Identifier(name) => {
+                self.tmp_name = name.clone();
+                self.next_token();
+                match self.current_token {
+                    TokenType::Semicolon => {
+                        self.out_spaces();
+                        println!("VarDeclare");
+                        self.space_counter+=1;
+                        self.var();
+                        self.space_counter-=1;
+                    }
+                    TokenType::OpenningParenthesis => {
+                        self.out_spaces();
+                        println!("FunctionDeclare");
+                        self.space_counter+=1;
+                        self.out_spaces();
+                        println!("{}", self.tmp_type);
+                        self.out_spaces();
+                        println!("{}", self.tmp_name);
+                        self.function_params();
+                        
+                        self.next_token();
+                        match self.current_token {
+                            TokenType::Semicolon => {
+                                return;
+                            }
+                            TokenType::OpenningBrace => {
+                                self.space_counter+=1;
+                                self.function_body();
+                                self.space_counter+=1;
+                            }
+                            _ => {},
+                        }
+
+                        self.space_counter-=1;
+                    }
+                    _ => {},
+                }
+            }
+            _ => {}
+        }
+    }
+
     fn var(&mut self) {
-        
+        self.out_spaces();
+        println!("{}", self.tmp_name);
+        self.out_spaces();
+        println!("{}", self.tmp_type);
+                
+    }
+
+    fn function_params(&mut self) {
+        loop {
+            self.next_token();
+            match &self.current_token {
+                TokenType::Type(name) | TokenType::Identifier(name) => {
+                    //println!("{:?}", self.current_token);
+                    self.tmp_type = name.clone();
+                    self.space_counter+=1;
+
+                    self.next_token();
+                    match &self.current_token {
+                        TokenType::Identifier(name) => {
+                            self.tmp_name = name.clone();
+                            self.var();
+                        }
+                        _ => {}
+                    }
+
+                    self.space_counter-=1;
+                }
+                TokenType::ClosingParenthesis => {
+                    break;
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn function_args(&mut self) {
+
+    }
+
+    fn function_body(&mut self) {
+        //println!("{:?}", self.current_token);
+        self.next_token();
+        loop {
+            self.next_token();
+            match &self.current_token {
+                TokenType::ClosingBrace => {
+                    break;
+                }
+                TokenType::Type(name) => {
+                    self.tmp_type = name.clone();
+                    self.declare();
+                }
+                _ => {} 
+            }
+        }
     }
 
     fn next_token(&mut self) {
