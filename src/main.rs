@@ -45,7 +45,7 @@ fn main() {
             }
 
             int arr[2];
-            stru r;
+            stru r = 1;
             r = 5;
             s = r.e + (5 / p[1]) - true;
             func(poopoo);

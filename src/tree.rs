@@ -222,7 +222,6 @@ impl Ast_tree {
                 }
                 TokenType::Struct => {
                     println!("StructDeclare");
-                    
                     self.space_counter += 1;
                     self.out_spaces();
                     self.struct_declare();
@@ -257,14 +256,7 @@ impl Ast_tree {
             match &self.current_token {
                 TokenType::Type(name) => {
                     self.tmp_type = name.clone();
-                    self.var();
-                    self.next_token();
-                    match self.current_token {
-                        TokenType::Semicolon => {
-                            continue;
-                        }
-                        _ => {}
-                    }
+                    self.declare();
                 }
                 TokenType::OpenningBrace => {
                     continue;
@@ -289,6 +281,7 @@ impl Ast_tree {
                         println!("VarDeclare");
                         self.space_counter+=1;
                         self.var();
+
                         self.space_counter-=1;
                     }
                     TokenType::OpenningParenthesis => {
@@ -314,6 +307,28 @@ impl Ast_tree {
                             _ => {},
                         }
 
+                        self.space_counter-=1;
+                    }
+                    TokenType::OpenningArray => {
+                        self.out_spaces();
+                        println!("VarDeclare");
+                        self.space_counter+=1;
+                        self.var();
+                        self.space_counter+=1;
+                        self.array_count_element();
+
+                        self.next_token();
+
+                        self.space_counter-=1;
+                        self.space_counter-=1;
+                    }
+                    TokenType::Assign => {
+                        self.space_counter+=1;
+                        self.out_spaces();
+                        println!("{}", self.tmp_name);
+                        self.out_spaces();
+                        println!("{:?}", self.current_token);
+                        self.assign();
                         self.space_counter-=1;
                     }
                     _ => {},
@@ -363,8 +378,145 @@ impl Ast_tree {
 
     }
 
+    fn array_count_element(&mut self) {
+        self.next_token();
+        match &self.current_token {
+            TokenType::Identifier(name) | TokenType::Number(name) => {
+                self.out_spaces();
+                println!("{}", name);
+                self.next_token();
+                match self.current_token {
+                    TokenType::Multi | TokenType::Plus | 
+                    TokenType::Minus | TokenType::Divide => {
+                        self.expression();
+                    },
+                    TokenType::ClosingArray => {
+                        return;
+                    }
+                    _ => {}
+                }
+            }
+            TokenType::ClosingArray => {
+                return;
+            }
+            _ => {}
+        }
+    }
+
+    fn array_access_element(&mut self) {
+        self.next_token(); 
+        match &self.current_token {
+            TokenType::Identifier(name) => {
+                self.space_counter+=1;
+                self.out_spaces();
+                println!("{}", name);
+                self.next_token();
+                match self.current_token {
+                    TokenType::ClosingArray => {
+                        return;
+                    }
+                    TokenType::Multi | TokenType::Plus | 
+                    TokenType::Minus | TokenType::Divide => {
+                        self.expression();
+                    },
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn expression(&mut self) {
+        self.out_spaces();
+        println!("{:?}", self.current_token);
+        self.next_token();
+        match &self.current_token {
+            TokenType::Identifier(name) | TokenType::Number(name) => {
+                self.space_counter+=1;
+                self.out_spaces();
+                println!("{}", name);
+                self.next_token();
+                match self.current_token {
+                    TokenType::Multi | TokenType::Plus | 
+                    TokenType::Minus | TokenType::Divide => {
+                        self.expression();
+                    },
+                    _ => {}
+                }
+                self.space_counter-=1;
+            }
+            _ => {}
+        }
+    }
+
+    fn condition(&mut self) {
+
+    }
+
+    fn assign(&mut self) {
+        self.next_token();
+        match &self.current_token {
+            TokenType::Identifier(name) | TokenType::Number(name) => {
+                self.tmp_name = name.clone();
+                self.next_token();
+                match self.current_token {
+                    TokenType::Semicolon => {
+                        self.out_spaces();
+                        println!("{}", self.tmp_name);
+                        return;
+                    }
+                    TokenType::Multi | TokenType::Plus | 
+                    TokenType::Minus | TokenType::Divide => {
+                        self.expression();
+                    },
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn if_out(&mut self) {
+
+    }
+
+    fn while_out(&mut self) {
+
+    }
+
+    fn struct_access(&mut self) {
+
+    }
+
+    fn primary(&mut self) {
+        self.next_token();
+        match &self.current_token {
+            TokenType::Dot => {
+                self.out_spaces();
+                println!("{}", self.tmp_name);
+                self.space_counter+=1;
+                self.struct_access();
+                self.space_counter-=1;
+            }
+            TokenType::OpenningArray => {
+                self.out_spaces();
+                println!("{}", self.tmp_name);
+                self.space_counter+=1;
+                self.array_access_element();
+                self.space_counter-=1;
+            }
+            TokenType::Assign => {
+                self.out_spaces();
+                println!("{}", self.tmp_name);
+                self.space_counter+=1;
+                self.assign();
+                self.space_counter-=1;
+            }
+            _ => {}
+        }
+    }
+
     fn function_body(&mut self) {
-        //println!("{:?}", self.current_token);
         self.next_token();
         loop {
             self.next_token();
@@ -376,6 +528,16 @@ impl Ast_tree {
                     self.tmp_type = name.clone();
                     self.declare();
                 }
+                TokenType::Identifier(name) => {
+                    self.tmp_name = name.clone();
+                    self.primary();
+                }
+                TokenType::If => {
+                    self.if_out();
+                }
+                TokenType::While => {
+                    self.while_out();
+                }
                 _ => {} 
             }
         }
@@ -385,9 +547,10 @@ impl Ast_tree {
         self.previous_token = self.current_token.clone();
         self.current_token = self.token_list.pop_front().unwrap();
         self.current_id+=1;
+        //println!("{:?}", self.current_token);
     }
 
-    fn out_spaces(&mut self) {
+    fn out_spaces(&self) {
         let mut i = 0;
         while i < self.space_counter {
             print!(" ");
