@@ -41,22 +41,20 @@ fn main() {
         {
             if(x && y + 1 == true || t || w && e)
             {
-                
+                r = 1;
             }
 
             int arr[2];
             stru r = 1;
             r = 5;
             s = r.e + (5 / p[1]) - true;
-            func(poopoo);
-
-            return 4 + t;
+            func(poopoo,2);
         }
         ";
 
         let lexer = Lexer::new(&line2);
         let mut analyser = Analyser::new(lexer);
-        let mut ast_tree = Ast_tree::new(analyser.start_analysis());
+        let mut ast_tree = Ast_tree::new(analyser.start_analysis(), analyser.struct_types);
         ast_tree.write_out();
         break;
     }

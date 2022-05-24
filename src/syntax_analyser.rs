@@ -26,12 +26,9 @@ pub struct Analyser<'a>{
     lexer : Lexer<'a>,
     previous_token : TokenType,
     current_token : TokenType,
-    struct_types : Vec<String>,
+    pub struct_types : Vec<String>,
     openning_parenthesis_counter : i32,
     closing_parenthesis_counter : i32,
-
-    tmp_name : String,
-    tmp_type : String,
 
     token_vec : VecDeque<TokenType>,
 }
@@ -46,9 +43,6 @@ impl<'a> Analyser<'a> {
             openning_parenthesis_counter : 0,
             closing_parenthesis_counter : 0,
 
-            tmp_name : String::new(),
-            tmp_type : String::new(),
-
             token_vec : VecDeque::<TokenType>::new(),
         }
     }
@@ -58,8 +52,6 @@ impl<'a> Analyser<'a> {
         while self.current_token != TokenType::Eof {
             match &self.current_token {
                 TokenType::Type( name ) => {
-                    self.tmp_type = name.clone();
-
                     self.check_declare();
                 },
                 TokenType::Struct => {
@@ -67,8 +59,6 @@ impl<'a> Analyser<'a> {
                 },
                 TokenType::Identifier( name ) => {
                     if self.struct_types.contains(&(name.clone())) {
-                        
-                        self.tmp_type = name.clone();
 
                         self.check_declare();
                     }
@@ -107,8 +97,6 @@ impl<'a> Analyser<'a> {
         self.next_token();
         match &self.current_token {
             TokenType::Identifier( name ) => {
-                self.tmp_name = name.clone();
-
                 self.next_token();
                 match self.current_token {
                     TokenType::OpenningParenthesis => {
@@ -150,9 +138,6 @@ impl<'a> Analyser<'a> {
             self.next_token();
             match &self.current_token {
                 TokenType::Type( name ) => {
-
-                    self.tmp_type = name.clone();
-
                     self.check_var();
                     self.next_token();
                     match self.current_token {
@@ -182,7 +167,6 @@ impl<'a> Analyser<'a> {
         match &self.current_token {
             TokenType::Number(name) => {
                 //Add array node with number in count
-                self.tmp_name = name.clone();
 
                 self.next_token();
                 match self.current_token {
@@ -202,8 +186,6 @@ impl<'a> Analyser<'a> {
             }
             TokenType::Identifier(name) =>{
                 //Add array node with identifier in count
-                self.tmp_name = name.clone();
-
                 self.next_token();
                 match self.current_token {
                     TokenType::Plus | TokenType::Multi | 
@@ -234,13 +216,9 @@ impl<'a> Analyser<'a> {
                 TokenType::ClosingBrace => break,
                 TokenType::Identifier( name ) => {
                     if self.struct_types.contains(name) {
-                        self.tmp_type = name.clone();
-
                         self.check_declare();
                     } 
                     else {
-                        self.tmp_name = name.clone();
-
                         self.check_primary();
                     }
                 },
@@ -279,13 +257,9 @@ impl<'a> Analyser<'a> {
                 TokenType::ClosingBrace => break,
                 TokenType::Identifier( name ) => {
                     if self.struct_types.contains(name) {
-                        self.tmp_type = name.clone();
-                        
                         self.check_declare();
                     }
                     else {
-                        self.tmp_name = name.clone();
-
                         self.check_primary();
                     }
                 },
@@ -324,8 +298,6 @@ impl<'a> Analyser<'a> {
         self.next_token();
         match &self.current_token {
             TokenType::Number( name ) | TokenType::Identifier( name ) | TokenType::Bool( name ) => {
-                self.tmp_name = name.clone();
-                
                 self.next_token();
                 match self.current_token {
                     TokenType::Plus | TokenType::Minus | 
@@ -428,7 +400,6 @@ impl<'a> Analyser<'a> {
 
         match &self.current_token {
             TokenType::Identifier(name) => {
-                self.tmp_name = name.clone();
                 self.next_token();
                 match self.current_token {
                     TokenType::Semicolon => {
@@ -454,7 +425,6 @@ impl<'a> Analyser<'a> {
                 }
             },
             TokenType::Number(name) => {
-                self.tmp_name = name.clone();
                 self.next_token();
                 match self.current_token {
                     TokenType::Semicolon => {
@@ -501,7 +471,6 @@ impl<'a> Analyser<'a> {
         match &self.current_token {
             TokenType::Number(name) | TokenType::Bool(name)=> {
                 //add this token to expression node
-                self.tmp_name = name.clone();
                 self.next_token();
                 match self.current_token {
                     TokenType::Plus | TokenType::Minus | 
@@ -514,7 +483,6 @@ impl<'a> Analyser<'a> {
             },
             TokenType::Identifier(name) => {
                 //add this token to expression node
-                self.tmp_name = name.clone();
                 self.next_token();
                 match self.current_token {
                     TokenType::Plus | TokenType::Minus | 
@@ -573,7 +541,6 @@ impl<'a> Analyser<'a> {
                     match &self.current_token {
                         TokenType::Identifier(name) | TokenType::Number(name) 
                         | TokenType::Bool(name) => {
-                            self.tmp_name = name.clone();
 
                             self.next_token();
                             match self.current_token {
@@ -627,8 +594,6 @@ impl<'a> Analyser<'a> {
         self.next_token();
         match &self.current_token {
             TokenType::Identifier(name) | TokenType::Number(name) | TokenType::Bool(name)=> {
-                self.tmp_name = name.clone();
-                
                 self.next_token();
                 match self.current_token {
                     TokenType::Plus | TokenType::Minus | 
@@ -649,7 +614,6 @@ impl<'a> Analyser<'a> {
         match &self.current_token {
             //Add array access
             TokenType::Identifier(name) | TokenType:: Number(name) => {
-                self.tmp_name = name.clone();
                 
                 self.next_token();
                 match self.current_token {
@@ -672,7 +636,6 @@ impl<'a> Analyser<'a> {
             match &self.current_token {
                 TokenType::Identifier(name) | TokenType::Number(name) => {
                     //Add id or number in node
-                    self.tmp_name = name.clone();
                     
                     self.next_token();
                     match self.current_token {
@@ -721,19 +684,15 @@ impl<'a> Analyser<'a> {
             match &self.current_token {
                 TokenType::Identifier( name ) => {
                     if self.struct_types.contains(name) {
-                        self.tmp_type = name.clone();
                         
                         self.check_declare();
                     }
                     else {
-                        self.tmp_name = name.clone();
 
                         self.check_primary();
                     }
                 },
                 TokenType::Type(name) => {
-                    self.tmp_type = name.clone();
-
                     self.check_var();
                     self.next_token();
                     match self.current_token {
@@ -752,8 +711,6 @@ impl<'a> Analyser<'a> {
         self.next_token();
         match &self.current_token {
             TokenType::Identifier(name) => {
-                self.tmp_name = name.clone();
-
                 self.next_token();
                 if self.current_token == TokenType::Dot {
                     self.check_struct_access();

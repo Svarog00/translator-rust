@@ -183,10 +183,12 @@ pub struct Ast_tree {
 
     tmp_name : String,
     tmp_type : String,
+
+    struct_types : Vec<String>,
 }
 
 impl Ast_tree {
-    pub fn new(new_token_list : VecDeque<TokenType>) -> Self {
+    pub fn new(new_token_list : VecDeque<TokenType>, struct_types : Vec<String>) -> Self {
         Ast_tree { 
             token_list : new_token_list,
             space_counter : 0,
@@ -198,6 +200,8 @@ impl Ast_tree {
 
             tmp_name : String::new(),
             tmp_type : String::new(),
+
+            struct_types,
         }
     }
 
@@ -323,9 +327,10 @@ impl Ast_tree {
                         self.space_counter-=1;
                     }
                     TokenType::Assign => {
-                        self.space_counter+=1;
                         self.out_spaces();
-                        println!("{}", self.tmp_name);
+                        println!("VarDeclare");
+                        self.space_counter+=1;
+                        self.var();
                         self.out_spaces();
                         println!("{:?}", self.current_token);
                         self.assign();
@@ -375,7 +380,66 @@ impl Ast_tree {
     }
 
     fn function_args(&mut self) {
+        self.next_token();
+        match &self.current_token {
+            TokenType::ClosingParenthesis => {
+                return;
+            }
+            TokenType::Identifier(name) => {
+                self.tmp_name = name.clone();
+                self.primary();
+                match self.current_token {
+                    TokenType::Multi | TokenType::Plus | 
+                    TokenType::Minus | TokenType::Divide => {
+                        self.space_counter+=1;
+                        self.expression();
+                        self.space_counter-=1;
+                    },
+                    TokenType::ClosingParenthesis => {
+                        return;
+                    }
+                    _ => {}
+                }
+                match self.current_token {
+                    TokenType::Comma => {
+                        self.function_args();
+                    }
+                    TokenType::ClosingParenthesis => {
+                        return;
+                    }
+                    _ => {}
+                }
+            }
+            TokenType::Number(name) | TokenType::Bool(name) =>{
+                self.tmp_name = name.clone();
+                self.next_token();
+                match self.current_token {
+                    TokenType::Multi | TokenType::Plus | 
+                    TokenType::Minus | TokenType::Divide => {
+                        self.expression();
+                    },
+                    TokenType::ClosingParenthesis => {
+                        self.out_spaces();
+                        println!("{}", self.tmp_name);
+                        return;
+                    }
+                    TokenType::Comma => {
+                        println!("{}", self.tmp_name);
+                        self.function_args();
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
 
+        self.next_token();
+        match self.current_token {
+            TokenType::Comma => {
+                self.function_args();
+            }
+            _ => {},
+        }
     }
 
     fn array_count_element(&mut self) {
@@ -406,37 +470,16 @@ impl Ast_tree {
     fn array_access_element(&mut self) {
         self.next_token(); 
         match &self.current_token {
-            TokenType::Identifier(name) => {
-                self.space_counter+=1;
-                self.out_spaces();
-                println!("{}", name);
-                self.next_token();
-                match self.current_token {
-                    TokenType::ClosingArray => {
-                        return;
-                    }
-                    TokenType::Multi | TokenType::Plus | 
-                    TokenType::Minus | TokenType::Divide => {
-                        self.expression();
-                    },
-                    _ => {}
-                }
-            }
-            _ => {}
-        }
-    }
-
-    fn expression(&mut self) {
-        self.out_spaces();
-        println!("{:?}", self.current_token);
-        self.next_token();
-        match &self.current_token {
             TokenType::Identifier(name) | TokenType::Number(name) => {
                 self.space_counter+=1;
                 self.out_spaces();
                 println!("{}", name);
                 self.next_token();
                 match self.current_token {
+                    TokenType::ClosingArray => {
+                        self.space_counter-=1;
+                        return;
+                    }
                     TokenType::Multi | TokenType::Plus | 
                     TokenType::Minus | TokenType::Divide => {
                         self.expression();
@@ -449,21 +492,61 @@ impl Ast_tree {
         }
     }
 
-    fn condition(&mut self) {
-
-    }
-
-    fn assign(&mut self) {
+    fn expression(&mut self) {
+        self.out_spaces();
+        println!("{:?}", self.current_token);
         self.next_token();
+        match self.current_token {
+            TokenType::OpenningParenthesis => {
+                self.next_token();
+                self.space_counter+=1;
+            }
+            _=> {},
+        }
+
         match &self.current_token {
-            TokenType::Identifier(name) | TokenType::Number(name) => {
+            TokenType::Number(name) | TokenType::Bool(name) => {
+                self.space_counter+=1;
+                self.out_spaces();
+                println!("{}", name);
+                self.next_token();
+                match self.current_token {
+                    TokenType::Semicolon => {
+                        return;
+                    }
+                    TokenType::Multi | TokenType::Plus | 
+                    TokenType::Minus | TokenType::Divide => {
+                        self.expression();
+                    },
+                    _ => {}
+                }
+                self.space_counter-=1;
+            }
+            TokenType::Identifier(name) => {
                 self.tmp_name = name.clone();
                 self.next_token();
                 match self.current_token {
                     TokenType::Semicolon => {
+                        self.space_counter+=1;
                         self.out_spaces();
                         println!("{}", self.tmp_name);
+                        self.space_counter-=1;
                         return;
+                    }
+                    TokenType::Dot => {
+                        self.out_spaces();
+                        println!("{}", self.tmp_name);
+                        self.space_counter+=1;
+                        self.struct_access();
+                        self.space_counter-=1;
+                    }
+                    TokenType::OpenningArray => {
+                        self.out_spaces();
+                        println!("{}", self.tmp_name);
+                        self.array_access_element();
+                    }
+                    TokenType::OpenningParenthesis => {
+                        self.function_args();
                     }
                     TokenType::Multi | TokenType::Plus | 
                     TokenType::Minus | TokenType::Divide => {
@@ -474,18 +557,280 @@ impl Ast_tree {
             }
             _ => {}
         }
+        match self.current_token {
+            TokenType::Semicolon => {
+                return;
+            }
+            TokenType::Equal | TokenType::NotEqual | 
+            TokenType::GreaterOrEqual | TokenType::GreaterThan |
+            TokenType::LowerThan | TokenType::LowerOrEqual => {
+                return;
+            }
+            _ => {}
+        }
+        self.next_token();
+        match self.current_token {
+            TokenType::ClosingParenthesis => {
+                self.space_counter-=1;
+            }
+            TokenType::Multi | TokenType::Plus | 
+            TokenType::Minus | TokenType::Divide => {
+                self.space_counter+=1;
+                self.expression();
+                self.space_counter-=1;
+            },
+            _ => {},
+        }
+    }
+
+    fn condition(&mut self) {
+        self.next_token();
+        match &self.current_token {
+            TokenType::ClosingParenthesis => {
+                return;
+            }
+            TokenType::Identifier(name) => {
+                self.tmp_name = name.clone();
+                self.primary();
+                match self.current_token {
+                    TokenType::Equal | TokenType::NotEqual | 
+                    TokenType::GreaterOrEqual | TokenType::GreaterThan |
+                    TokenType::LowerThan | TokenType::LowerOrEqual => {
+                        self.space_counter+=1;
+                        self.equation();
+                        self.space_counter-=1;
+                    }
+                    TokenType::Multi | TokenType::Plus | 
+                    TokenType::Minus | TokenType::Divide => {
+                        self.space_counter+=1;
+                        self.expression();
+                        self.space_counter-=1;
+                    },
+                    TokenType::And | TokenType::Or => {
+                        self.out_spaces();
+                        println!("{:?}", self.current_token);
+                        self.condition();
+                    }
+                    TokenType::ClosingParenthesis => {
+                        return;
+                    }
+                    _ => {}
+                }
+                
+                match self.current_token {
+                    TokenType::Equal | TokenType::NotEqual | 
+                    TokenType::GreaterOrEqual | TokenType::GreaterThan |
+                    TokenType::LowerThan | TokenType::LowerOrEqual => {
+                        self.space_counter+=1;
+                        self.equation();
+                        self.space_counter-=1;
+                    }
+                    TokenType::And | TokenType::Or => {
+                        self.out_spaces();
+                        println!("{:?}", self.current_token);
+                        self.condition();
+                    }
+                    TokenType::ClosingParenthesis => {
+                        return;
+                    }
+                    _ => {}
+                }
+            }
+            TokenType::Number(name) | TokenType::Bool(name) =>{
+                self.tmp_name = name.clone();
+                self.next_token();
+                match self.current_token {
+                    TokenType::Equal | TokenType::NotEqual | 
+                    TokenType::GreaterOrEqual | TokenType::GreaterThan |
+                    TokenType::LowerThan | TokenType::LowerOrEqual => {
+                        self.equation();
+                    }
+                    TokenType::Multi | TokenType::Plus | 
+                    TokenType::Minus | TokenType::Divide => {
+                        self.expression();
+                    },
+                    TokenType::ClosingParenthesis => {
+                        return;
+                    }
+                    _ => {}
+                }
+
+                match self.current_token {
+                    TokenType::Equal | TokenType::NotEqual | 
+                    TokenType::GreaterOrEqual | TokenType::GreaterThan |
+                    TokenType::LowerThan | TokenType::LowerOrEqual => {
+                        self.space_counter+=1;
+                        self.equation();
+                        self.space_counter-=1;
+                    }
+                    TokenType::And | TokenType::Or => {
+                        self.condition();
+                    }
+                    TokenType::ClosingParenthesis => {
+                        return;
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn equation(&mut self) {
+        self.out_spaces();
+        println!("{:?}", self.current_token);
+        self.next_token();
+        match &self.current_token {
+            TokenType::Identifier(name) => {
+                self.tmp_name = name.clone();
+                self.primary();
+                match self.current_token {
+                    TokenType::Multi | TokenType::Plus | 
+                    TokenType::Minus | TokenType::Divide => {
+                        self.space_counter+=1;
+                        self.expression();
+                        self.space_counter-=1;
+                    },
+                    _ => { 
+                        self.out_spaces();
+                        println!("{}", self.tmp_name);
+                        return;
+                    }
+                }
+            }
+            TokenType::Number(name) | TokenType::Bool(name) => {
+                self.tmp_name = name.clone();
+                self.next_token();
+                match self.current_token {
+                    TokenType::Multi | TokenType::Plus | 
+                    TokenType::Minus | TokenType::Divide => {
+                        self.space_counter+=1;
+                        self.expression();
+                        self.space_counter-=1;
+                    },
+                    _ => { 
+                        self.out_spaces();
+                        println!("{}", self.tmp_name);
+                        return;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn assign(&mut self) {
+        self.next_token();
+        match &self.current_token {
+            TokenType::Identifier(name) | TokenType::Number(name) | TokenType::Bool(name) => {
+                self.tmp_name = name.clone();
+                self.next_token();
+                match self.current_token {
+                    TokenType::Semicolon => {
+                        self.out_spaces();
+                        println!("{}", self.tmp_name);
+                        return;
+                    }
+                    TokenType::Dot => {
+                        self.out_spaces();
+                        println!("{}", self.tmp_name);
+                        self.space_counter+=1;
+                        self.struct_access();
+                        self.space_counter-=1;
+                    }
+                    TokenType::OpenningArray => {
+                        self.out_spaces();
+                        println!("{}", self.tmp_name);
+                        self.space_counter+=1;
+                        self.array_access_element();
+                        self.space_counter-=1;
+                    }
+                    TokenType::OpenningParenthesis => {
+                        self.function_args();
+                    }
+                    TokenType::Multi | TokenType::Plus | 
+                    TokenType::Minus | TokenType::Divide => {
+                        self.expression();
+                    },
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+        match self.current_token {
+            TokenType::Multi | TokenType::Plus | 
+            TokenType::Minus | TokenType::Divide => {
+                self.space_counter+=1;
+                self.expression();
+                self.space_counter-=1;
+            },
+            _ => {},
+        }
     }
 
     fn if_out(&mut self) {
-
+        self.out_spaces();
+        println!("If");
+        self.next_token();
+        match self.current_token {
+            TokenType::OpenningParenthesis => {
+                self.space_counter+=1;
+                self.condition();
+                self.space_counter-=1;
+            }
+            _ => {}
+        }
+        self.next_token();
+        match self.current_token {
+            TokenType::OpenningBrace => {
+                self.space_counter+=1;
+                self.function_body();
+                self.space_counter-=1;
+            }
+            _ => {}
+        }
     }
 
     fn while_out(&mut self) {
-
+        self.out_spaces();
+        println!("While");
+        self.next_token();
+        match self.current_token {
+            TokenType::OpenningParenthesis => {
+                self.space_counter+=1;
+                self.condition();
+                self.space_counter-=1;
+            }
+            _ => {}
+        }
+        self.next_token();
+        match self.current_token {
+            TokenType::OpenningBrace => {
+                self.space_counter+=1;
+                self.function_body();
+                self.space_counter-=1;
+            }
+            _ => {}
+        }
     }
 
     fn struct_access(&mut self) {
-
+        self.next_token();
+        match &self.current_token {
+            TokenType::Identifier(name) => {
+                self.out_spaces();
+                self.tmp_name = name.clone();
+                println!("{}", self.tmp_name);
+                self.next_token();
+                if self.current_token == TokenType::Dot {
+                    self.space_counter+=1;
+                    self.struct_access();
+                    self.space_counter-=1;
+                }
+                self.space_counter-=1;
+            },
+            _ => return,
+        }
     }
 
     fn primary(&mut self) {
@@ -508,16 +853,27 @@ impl Ast_tree {
             TokenType::Assign => {
                 self.out_spaces();
                 println!("{}", self.tmp_name);
+                self.out_spaces();
+                println!("{:?}", self.current_token);
                 self.space_counter+=1;
                 self.assign();
                 self.space_counter-=1;
             }
-            _ => {}
+            TokenType::OpenningParenthesis => {
+                self.out_spaces();
+                println!("{}", self.tmp_name);
+                self.space_counter+=1;
+                self.function_args();
+                self.space_counter-=1;
+            }
+            _ => {
+                self.out_spaces();
+                println!("{}", self.tmp_name);
+            }
         }
     }
 
     fn function_body(&mut self) {
-        self.next_token();
         loop {
             self.next_token();
             match &self.current_token {
@@ -529,9 +885,19 @@ impl Ast_tree {
                     self.declare();
                 }
                 TokenType::Identifier(name) => {
-                    self.tmp_name = name.clone();
-                    self.primary();
+                    if self.struct_types.contains(name) {
+                        self.tmp_type = name.clone();
+                        self.declare();
+                    }
+                    else {
+                        self.tmp_name = name.clone();
+                        self.primary();
+                    }
                 }
+                TokenType::Return => {
+                    self.return_out();
+                }
+
                 TokenType::If => {
                     self.if_out();
                 }
@@ -543,10 +909,17 @@ impl Ast_tree {
         }
     }
 
+    fn return_out(&mut self) {
+        self.next_token();
+        match self.current_token {
+            
+            _ => return,
+        }
+    }
+
     fn next_token(&mut self) {
         self.previous_token = self.current_token.clone();
         self.current_token = self.token_list.pop_front().unwrap();
-        self.current_id+=1;
         //println!("{:?}", self.current_token);
     }
 
