@@ -100,8 +100,6 @@ impl<'a> Analyser<'a> {
                 self.next_token();
                 match self.current_token {
                     TokenType::OpenningParenthesis => {
-                        //Add func node to AST
-
                         self.check_func_params();
                         self.next_token();
                         match self.current_token {
@@ -115,15 +113,12 @@ impl<'a> Analyser<'a> {
                         }
                     },
                     TokenType::Semicolon => {
-                        //Add var node to AST
                         return;
                     },
                     TokenType::OpenningArray => {
-                        //add array decl node
                         self.check_array_declare();
                     },
                     TokenType::Assign => {
-                        //add assign node
                         self.check_assign();
                     },
                     _ => self.panic_syntax_error("After id in declaration should go assign, array assign, semicolon or func params"),
@@ -229,12 +224,7 @@ impl<'a> Analyser<'a> {
                     }
                 },
                 TokenType::While => {
-                    self.check_condition();
-                    self.next_token();
-                    match self.current_token {
-                        TokenType::OpenningBrace => self.check_while_statement(),
-                        _ => self.panic_syntax_error("After while expected body"),
-                    }
+                    self.check_while_state();
                 },
                 TokenType::Type(_) => {
                     self.check_declare();
@@ -247,6 +237,22 @@ impl<'a> Analyser<'a> {
                     self.panic_syntax_error("Unexpected token in statement body");               
                 }           
             }
+        }
+    }
+
+    fn check_while_state(&mut self) {   
+        self.next_token();
+        match self.current_token {
+            TokenType::OpenningParenthesis => {
+                self.check_condition();
+            }
+            _ => self.panic_syntax_error("Expected condition after if"),
+        }
+        //self.check_condition();
+        self.next_token();
+        match self.current_token {
+            TokenType::OpenningBrace => self.check_statement(),
+            _ => self.panic_syntax_error("After while expected body"),
         }
     }
 
@@ -270,12 +276,7 @@ impl<'a> Analyser<'a> {
                     }
                 },
                 TokenType::While => {
-                    self.check_condition();
-                    self.next_token();
-                    match self.current_token {
-                        TokenType::OpenningBrace => self.check_statement(),
-                        _ => self.panic_syntax_error("After if/while expected body"),
-                    }
+                    self.check_while_state();
                 },
                 TokenType::Type(_) => {
                     self.check_declare();

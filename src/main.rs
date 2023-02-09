@@ -39,7 +39,7 @@ fn main() {
 
         int poopoo(int t, double a) 
         {
-            if(x && y + 1 == true || t || w && e)
+            while(x && y + 1 == true || t || w && e)
             {
                 r = 1;
             }
