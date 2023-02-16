@@ -1,4 +1,4 @@
-use std::{rc::Rc, collections::VecDeque, cell::{RefCell}, borrow::BorrowMut};
+use std::{rc::Rc, collections::VecDeque, cell::{RefCell}};
 
 use crate::token::*;
 use crate::prelude::*;
@@ -42,7 +42,7 @@ impl AstTree {
 
     pub fn write_out(&mut self) {
         self.current = self.root.clone();
-        self.current.borrow_mut().value = Some(TokenType::Program);
+        (*self.current).borrow_mut().value = Some(TokenType::Program);
         println!("Program");
         self.space_counter += 1;
         self.out_spaces();

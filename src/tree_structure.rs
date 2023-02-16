@@ -2,7 +2,8 @@ use std::{rc::Rc, cell::RefCell};
 
 use crate::token::*;
 
-//Rc = reference counter. Rc::Copy делает копию УКАЗАТЕЛЯ, а не предмета, на который он указывает.
+//Rc = reference counter. Rc<T> lets you have multiple owners of some data, but it only gives immutable access to that data.
+//Rc::Copy делает копию УКАЗАТЕЛЯ, а не предмета, на который он указывает.
 //RefCell = ????
 pub struct TreeNode {
     pub value : Option<TokenType>,
