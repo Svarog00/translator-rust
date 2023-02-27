@@ -1,6 +1,10 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenType{
     Program,
+    StructDecalre,
+    VarDeclare,
+    FunctionDeclare,
+
     Illegal,
     Eof,
     

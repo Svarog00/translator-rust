@@ -1,4 +1,4 @@
-use std::{rc::Rc, collections::VecDeque, cell::{RefCell}};
+use std::{rc::Rc, collections::VecDeque, cell::{RefCell}, borrow::BorrowMut};
 
 use crate::token::*;
 use crate::prelude::*;
@@ -8,7 +8,6 @@ pub struct AstTree {
     space_counter : u32,
     current_token : TokenType,
     previous_token : TokenType,
-    current_id : u32,
 
     tmp_name : String,
     tmp_type : String,
@@ -28,8 +27,6 @@ impl AstTree {
             current_token : TokenType::default(),
             previous_token : TokenType::default(),
 
-            current_id : 0,
-
             tmp_name : String::new(),
             tmp_type : String::new(),
 
@@ -42,8 +39,9 @@ impl AstTree {
 
     pub fn write_out(&mut self) {
         self.current = self.root.clone();
-        (*self.current).borrow_mut().value = Some(TokenType::Program);
         println!("Program");
+        (*self.current).borrow_mut().value = Some(TokenType::Program);
+        
         self.space_counter += 1;
         self.out_spaces();
         loop {
@@ -65,9 +63,15 @@ impl AstTree {
                 }
                 TokenType::Struct => {
                     println!("StructDeclare");
+                    (*self.current).borrow_mut().add_child(
+                        Rc::new(RefCell::new(TreeNode::new_init(
+                            TokenType::StructDecalre, Rc::clone(&self.current))))
+                    );
                     self.space_counter += 1;
                     self.out_spaces();
                     self.struct_declare();
+
+                    self.get_to_parent();
 
                     self.space_counter -= 2;
                 }
@@ -124,19 +128,35 @@ impl AstTree {
                     TokenType::Semicolon => {
                         self.out_spaces();
                         println!("VarDeclare");
+                        self.add_child(TokenType::VarDeclare);
+                        //Get to children
+                        let current_clone = self.current.clone();
+                        self.current = (*current_clone).borrow_mut().children[0].clone();
+
                         self.space_counter+=1;
                         self.var();
 
+                        self.get_to_parent();
                         self.space_counter-=1;
                     }
                     TokenType::OpenningParenthesis => {
                         self.out_spaces();
                         println!("FunctionDeclare");
+                        
+                        self.add_child(TokenType::FunctionDeclare);
+
+                        let current_clone = self.current.clone();
+                        self.current = (*current_clone).borrow_mut().children[0].clone();  
+
                         self.space_counter+=1;
                         self.out_spaces();
-                        println!("{}", self.tmp_type);
+                        println!("{}", self.tmp_type); 
+                        self.add_child(TokenType::Type(self.tmp_type.clone()));
+
                         self.out_spaces();
                         println!("{}", self.tmp_name);
+                        self.add_child(TokenType::Identifier(self.tmp_type.clone()));
+
                         self.function_params();
                         
                         self.next_token();
@@ -157,6 +177,11 @@ impl AstTree {
                     TokenType::OpenningArray => {
                         self.out_spaces();
                         println!("VarDeclare");
+                        self.add_child(TokenType::VarDeclare);
+                        //Get to children
+                        let current_clone = self.current.clone();
+                        self.current = (*current_clone).borrow_mut().children[0].clone();
+
                         self.space_counter+=1;
                         self.var();
                         self.space_counter+=1;
@@ -169,12 +194,18 @@ impl AstTree {
                     TokenType::Assign => {
                         self.out_spaces();
                         println!("VarDeclare");
+                        self.add_child(TokenType::VarDeclare);
+                        //Get to children
+                        let current_clone = self.current.clone();
+                        self.current = (*current_clone).borrow_mut().children[0].clone();
+
                         self.space_counter+=1;
                         self.var();
                         self.out_spaces();
                         println!("{:?}", self.current_token);
+                        self.add_child(self.current_token.clone());
                         self.assign();
-                        //tree up
+                        self.get_to_parent();
                         self.space_counter-=1;
                     }
                     _ => {},
@@ -187,9 +218,11 @@ impl AstTree {
     fn var(&mut self) {
         self.out_spaces();
         println!("{}", self.tmp_name);
+        self.add_child(TokenType::Identifier(self.tmp_type.clone()));
+
         self.out_spaces();
-        println!("{}", self.tmp_type);
-                
+        println!("{}", self.tmp_type); 
+        self.add_child(TokenType::Type(self.tmp_type.clone()));
     }
 
     fn function_params(&mut self) {
@@ -768,5 +801,17 @@ impl AstTree {
             print!(" ");
             i+=1;
         }
+    }
+
+    fn get_to_parent(&mut self) {
+        let current_clone = Rc::clone(&self.current);
+        self.current = Rc::clone(current_clone.borrow().parent.as_ref().unwrap());
+    }
+
+    fn add_child(&mut self, token : TokenType){
+        (*self.current).borrow_mut().add_child(
+            Rc::new(RefCell::new(TreeNode::new_init(
+                token, Rc::clone(&self.current))))
+        );
     }
 }

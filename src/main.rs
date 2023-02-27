@@ -18,7 +18,7 @@ use prelude::*;
 fn main() {
     
     loop {
-        let mut line2 = "
+        let line2 = "
         struct stru 
         {
             double g;
