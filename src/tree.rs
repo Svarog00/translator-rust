@@ -63,15 +63,10 @@ impl AstTree {
                 }
                 TokenType::Struct => {
                     println!("StructDeclare");
-                    (*self.current).borrow_mut().add_child(
-                        Rc::new(RefCell::new(TreeNode::new_init(
-                            TokenType::StructDecalre, Rc::clone(&self.current))))
-                    );
+
                     self.space_counter += 1;
                     self.out_spaces();
                     self.struct_declare();
-
-                    self.get_to_parent();
 
                     self.space_counter -= 2;
                 }
@@ -90,9 +85,15 @@ impl AstTree {
         match &self.current_token {
             TokenType::Identifier(name) => {
                 println!("{}", name);
+
+                self.add_child(TokenType::StructDeclare(name.clone()));
+                let current_clone = self.current.clone();
+                self.current = (*current_clone).borrow_mut().children[0].clone();
+
                 self.space_counter += 1;
                 self.struct_body();
 
+                self.get_to_parent();
                 self.space_counter -= 1;
             }
             _ => {}
@@ -128,40 +129,40 @@ impl AstTree {
                     TokenType::Semicolon => {
                         self.out_spaces();
                         println!("VarDeclare");
-                        self.add_child(TokenType::VarDeclare);
+                        self.add_child(TokenType::VarDeclare {
+                            var_type : self.tmp_type.clone(), name : self.tmp_name.clone()
+                        });
                         //Get to children
-                        let current_clone = self.current.clone();
-                        self.current = (*current_clone).borrow_mut().children[0].clone();
 
                         self.space_counter+=1;
                         self.var();
-
-                        self.get_to_parent();
+                        
                         self.space_counter-=1;
                     }
                     TokenType::OpenningParenthesis => {
                         self.out_spaces();
                         println!("FunctionDeclare");
                         
-                        self.add_child(TokenType::FunctionDeclare);
+                        self.add_child(TokenType::FunctionDeclare { 
+                            return_type : self.tmp_type.clone(), name : self.tmp_name.clone()
+                        });
 
                         let current_clone = self.current.clone();
-                        self.current = (*current_clone).borrow_mut().children[0].clone();  
+                        self.current = (*current_clone).borrow_mut().children[0].clone();  //Change counter
 
                         self.space_counter+=1;
                         self.out_spaces();
                         println!("{}", self.tmp_type); 
-                        self.add_child(TokenType::Type(self.tmp_type.clone()));
 
                         self.out_spaces();
                         println!("{}", self.tmp_name);
-                        self.add_child(TokenType::Identifier(self.tmp_type.clone()));
 
                         self.function_params();
                         
                         self.next_token();
                         match self.current_token {
                             TokenType::Semicolon => {
+                                self.get_to_parent();
                                 return;
                             }
                             TokenType::OpenningBrace => {
@@ -171,16 +172,18 @@ impl AstTree {
                             }
                             _ => {},
                         }
-                        //Tree up
+                        self.get_to_parent();
                         self.space_counter-=1;
                     }
                     TokenType::OpenningArray => {
                         self.out_spaces();
                         println!("VarDeclare");
-                        self.add_child(TokenType::VarDeclare);
+                        self.add_child(TokenType::VarDeclare {
+                            var_type : self.tmp_type.clone(), name : self.tmp_name.clone()
+                        });
                         //Get to children
                         let current_clone = self.current.clone();
-                        self.current = (*current_clone).borrow_mut().children[0].clone();
+                        self.current = (*current_clone).borrow_mut().children[0].clone(); //Change counter
 
                         self.space_counter+=1;
                         self.var();
@@ -188,16 +191,19 @@ impl AstTree {
                         self.array_count_element();
 
                         self.next_token();
-                        //Tree up
+
+                        self.get_to_parent();
                         self.space_counter-=2;
                     }
                     TokenType::Assign => {
                         self.out_spaces();
                         println!("VarDeclare");
-                        self.add_child(TokenType::VarDeclare);
+                        self.add_child(TokenType::VarDeclare {
+                            var_type : self.tmp_type.clone(), name : self.tmp_name.clone()
+                        });
                         //Get to children
                         let current_clone = self.current.clone();
-                        self.current = (*current_clone).borrow_mut().children[0].clone();
+                        self.current = (*current_clone).borrow_mut().children[0].clone(); //Change counter
 
                         self.space_counter+=1;
                         self.var();
@@ -205,6 +211,7 @@ impl AstTree {
                         println!("{:?}", self.current_token);
                         self.add_child(self.current_token.clone());
                         self.assign();
+                        
                         self.get_to_parent();
                         self.space_counter-=1;
                     }
@@ -218,11 +225,9 @@ impl AstTree {
     fn var(&mut self) {
         self.out_spaces();
         println!("{}", self.tmp_name);
-        self.add_child(TokenType::Identifier(self.tmp_type.clone()));
 
         self.out_spaces();
         println!("{}", self.tmp_type); 
-        self.add_child(TokenType::Type(self.tmp_type.clone()));
     }
 
     fn function_params(&mut self) {
@@ -230,7 +235,6 @@ impl AstTree {
             self.next_token();
             match &self.current_token {
                 TokenType::Type(name) | TokenType::Identifier(name) => {
-                    //println!("{:?}", self.current_token);
                     self.tmp_type = name.clone();
                     self.space_counter+=1;
 
@@ -238,6 +242,10 @@ impl AstTree {
                     match &self.current_token {
                         TokenType::Identifier(name) => {
                             self.tmp_name = name.clone();
+                            self.add_child(TokenType::VarDeclare {
+                                var_type : self.tmp_type.clone(), name : self.tmp_name.clone()
+                            });
+                            
                             self.var();
                         }
                         _ => {}
@@ -323,6 +331,9 @@ impl AstTree {
                 self.out_spaces();
                 println!("{}", name);
                 self.next_token();
+
+                self.add_child(self.current_token.clone());
+                
                 match self.current_token {
                     TokenType::Multi | TokenType::Plus | 
                     TokenType::Minus | TokenType::Divide => {
@@ -594,6 +605,9 @@ impl AstTree {
     }
 
     fn assign(&mut self) {
+        let current_clone = self.current.clone();
+        self.current = (*current_clone).borrow_mut().children[0].clone(); //Change counter
+
         self.next_token();
         match &self.current_token {
             TokenType::Identifier(name) | TokenType::Number(name) | TokenType::Bool(name) => {

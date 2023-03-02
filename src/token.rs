@@ -1,9 +1,15 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum TokenType{
     Program,
-    StructDecalre,
-    VarDeclare,
-    FunctionDeclare,
+    StructDeclare(String),
+    VarDeclare {
+        var_type : String,
+        name : String,
+    },
+    FunctionDeclare {
+        return_type : String,
+        name : String,
+    },
 
     Illegal,
     Eof,

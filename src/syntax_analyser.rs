@@ -256,45 +256,6 @@ impl<'a> Analyser<'a> {
         }
     }
 
-    fn check_while_statement(&mut self) {
-        loop {
-            self.next_token();
-            match &self.current_token {
-                TokenType::ClosingBrace => break,
-                TokenType::Identifier( name ) => {
-                    if self.struct_types.contains(name) {
-                        self.check_declare();
-                    }
-                    else {
-                        self.check_primary();
-                    }
-                },
-                TokenType::If => {
-                    self.check_if_state();
-                    if self.current_token == TokenType::ClosingBrace {
-                        return;
-                    }
-                },
-                TokenType::While => {
-                    self.check_while_state();
-                },
-                TokenType::Type(_) => {
-                    self.check_declare();
-                    self.next_token();
-                },
-                TokenType::Return => {
-                    self.check_return();
-                },
-                TokenType::Break | TokenType::Continue | TokenType::Semicolon => {
-                    continue;
-                }
-                _ => {
-                    self.panic_syntax_error("Unexpected token in statement body");                
-                }           
-            }
-        }
-    }
-
     fn check_return(&mut self){
         self.next_token();
         match &self.current_token {
