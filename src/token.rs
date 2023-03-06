@@ -10,7 +10,9 @@ pub enum TokenType{
         return_type : String,
         name : String,
     },
-    FunctionBody,
+    StatementBody,
+    Condition,
+    StructAccess,
 
     Illegal,
     Eof,
