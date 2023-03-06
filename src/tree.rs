@@ -2,7 +2,10 @@ use std::{rc::Rc, collections::VecDeque, cell::{RefCell}, borrow::BorrowMut};
 
 use crate::token::*;
 use crate::prelude::*;
-
+///
+/// TODO:
+/// Function params and below
+/// 
 pub struct AstTree {
     token_list : VecDeque<TokenType>,
     space_counter : u32,
@@ -88,7 +91,10 @@ impl AstTree {
 
                 self.add_child(TokenType::StructDeclare(name.clone()));
                 let current_clone = self.current.clone();
-                self.current = (*current_clone).borrow_mut().children[0].clone();
+                self.current = (*current_clone).borrow_mut().children
+                .last()
+                .unwrap()
+                .clone();
 
                 self.space_counter += 1;
                 self.struct_body();
@@ -148,7 +154,10 @@ impl AstTree {
                         });
 
                         let current_clone = self.current.clone();
-                        self.current = (*current_clone).borrow_mut().children[0].clone();  //Change counter
+                        self.current = (*current_clone).borrow_mut().children
+                        .last()
+                        .unwrap()
+                        .clone();
 
                         self.space_counter+=1;
                         self.out_spaces();
@@ -166,6 +175,13 @@ impl AstTree {
                                 return;
                             }
                             TokenType::OpenningBrace => {
+                                self.add_child(TokenType::FunctionBody);
+                                let current_clone = self.current.clone();
+                                self.current = (*current_clone).borrow_mut().children
+                                .last()
+                                .unwrap()
+                                .clone();
+
                                 self.space_counter+=1;
                                 self.function_body();
                                 self.space_counter+=1;
@@ -183,7 +199,10 @@ impl AstTree {
                         });
                         //Get to children
                         let current_clone = self.current.clone();
-                        self.current = (*current_clone).borrow_mut().children[0].clone(); //Change counter
+                        self.current = (*current_clone).borrow_mut().children
+                        .last()
+                        .unwrap()
+                        .clone();
 
                         self.space_counter+=1;
                         self.var();
@@ -201,9 +220,12 @@ impl AstTree {
                         self.add_child(TokenType::VarDeclare {
                             var_type : self.tmp_type.clone(), name : self.tmp_name.clone()
                         });
-                        //Get to children
+                        //Get to child
                         let current_clone = self.current.clone();
-                        self.current = (*current_clone).borrow_mut().children[0].clone(); //Change counter
+                        self.current = (*current_clone).borrow_mut().children
+                        .last()
+                        .unwrap()
+                        .clone();
 
                         self.space_counter+=1;
                         self.var();
@@ -273,6 +295,8 @@ impl AstTree {
                 match self.current_token {
                     TokenType::Multi | TokenType::Plus | 
                     TokenType::Minus | TokenType::Divide => {
+
+
                         self.space_counter+=1;
                         self.expression();
                         self.space_counter-=1;
@@ -337,6 +361,7 @@ impl AstTree {
                 match self.current_token {
                     TokenType::Multi | TokenType::Plus | 
                     TokenType::Minus | TokenType::Divide => {
+                        //Add child expression and go to its node
                         self.expression();
                     },
                     TokenType::ClosingArray => {
@@ -380,6 +405,8 @@ impl AstTree {
     fn expression(&mut self) {
         self.out_spaces();
         println!("{:?}", self.current_token);
+
+
         self.next_token();
         match self.current_token {
             TokenType::OpenningParenthesis => {
